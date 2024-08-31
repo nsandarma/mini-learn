@@ -2,116 +2,101 @@ import numpy as np
 from typing import Literal
 from collections import Counter
 
-from minilearn.models._base import Base
+from minilearn.models._base import BaseClassifier,BaseRegressor
 from minilearn.models.__utils import minhowski_distance
 
 
-class KNN(Base):
+class NearestNeighbor:
+  def __init__(self,n_neighbors:int = 5 , metric:Literal["euclidean","manhattan"] ="euclidean") :
+    assert metric in ["euclidean","manhattan"], "metric not in 'euclidean','manhattan']"
+    self.__n_neighbors = n_neighbors
+    self.__metric = metric
+
+  def fit(self,X:np.ndarray,y:np.ndarray):
+    assert len(X) == len(y) , "len is not same !"
+    self.X = X
+    self.y = y
+    self.n = len(X)
+    self.is_fitted = True
+    return self
+
+  def neighbors(self,X:np.ndarray = None,n_neighbors:int = None) -> tuple:
+    """return : dist,indices"""
+    self.check_is_fitted()
+
+    x_test = self.X if X is None else X
+    n_neighbors = self.n_neighbors if n_neighbors is None else n_neighbors
+    x_test = np.array(x_test) if not isinstance(x_test,np.ndarray) else x_test
+
+    assert x_test.ndim == 2 and x_test.shape[1] == self.X.shape[1], "X_test dim not same with X_train"
+    p = 1 if self.metric == "manhattan" else 2
+    distances = np.array([minhowski_distance(self.X,x,p=p) for x in x_test])
+
+    if x_test is self.X and X is None: np.fill_diagonal(distances, np.inf)
+    args = np.argsort(distances,1)[:,:n_neighbors]
+    distances = np.take_along_axis(distances, args, axis=1)
+    
+    return distances, args
+  
+  @property
+  def n_neighbors(self)->int:return self.__n_neighbors
+
+  @property
+  def metric(self)->str: return self.__metric
+
+
+class KNN(NearestNeighbor,BaseClassifier):
   name = "KNN"
   t = "classification"
 
-  def __init__(self,n_neighbors:int = 5,metric:Literal["euclidean","manhattan"]="euclidean"):
-    assert metric in ["euclidean","manhattan"], "metric not in 'euclidean','manhattan']"
-    self.n_neighbors = n_neighbors
-    self.metric = metric
-
-  def fit(self,X_train:np.ndarray,y_train:np.ndarray):
-    assert len(X_train) == len(y_train) , "len is not same !"
-    self.X_train = X_train
-    self.y_train = y_train
-    self.n = len(X_train)
-    self.is_fitted = True
-    return self
-  
-  def fit_predict(self,X_train:np.ndarray,y_train:np.ndarray):
-    self.fit(X_train,y_train)
-
-  def _predict(self,idx:np.ndarray):
-    return Counter(self.y_train[idx]).most_common(1)[0][0]
-
-  def predict(self,x_test:np.ndarray):
-    self.check_is_fitted()
-    _,idx = self.neighbors(x_test)
-    y_pred = np.array([self._predict(i) for i in idx])
+  def predict(self,X:np.ndarray):
+    _,idx = self.neighbors(n_neighbors=self.n_neighbors,X = X)
+    __voting = lambda idx : Counter(self.y[idx]).most_common(1)[0][0] if len(idx) != 2 else self.y[idx][1]
+    y_pred = np.array([__voting(i) for i in idx])
     return y_pred
 
-  def neighbors(self,x_test:np.ndarray) -> tuple:
-    """return : dist,indices"""
-    self.check_is_fitted()
-    x_test = np.array(x_test) if not isinstance(x_test,np.ndarray) else x_test
-    assert x_test.ndim == 2 and x_test.shape[1] == self.X_train.shape[1], "X_test dim not same with X_train"
-
-    p = 1 if self.metric == "manhattan" else 2
-
-    distances = np.array([minhowski_distance(self.X_train,x,p=p) for x in x_test])
-
-    args = np.argsort(distances,1)[:,:self.n_neighbors]
-    distances.sort(axis=1)
-    return distances[:,:self.n_neighbors],args
-
-class KNNRegressor(KNN):
-  name = "KNNRegressor"
-  t = "regression"
-  def __init__(self,n_neighbors:int = 5,metric = Literal["euclidean","manhattan"]):
-    super().__init__(n_neighbors=n_neighbors,metric=metric)
-  
-  def _predict(self,idx):
-    return np.mean(self.y_train[idx])
-  
+  def predict_proba(self, X: np.ndarray):
+      _, idx = self.neighbors(X = X)
+      probabilities = []
+      for neighbors_indices in idx:
+          class_counts = Counter(self.y[neighbors_indices])
+          total_counts = sum(class_counts.values())
+          proba = {cls: count / total_counts for cls, count in class_counts.items()}
+          probabilities.append([proba.get(cls, 0.0) for cls in np.unique(self.y)])
+      return np.array(probabilities)
 
 class MKNN(KNN):
   name = "MKNN"
+
   def __init__(self,n_neighbors:int = 5,metric:Literal["euclidean","manhattan"] = "euclidean",e:float =0.5):
     self.e = e
     super().__init__(n_neighbors=n_neighbors,metric=metric)
 
-  def _weight_calculate(self,dist,idx,val):
+  def __weight_calculate(self,dist,idx,val):
     weight = val * 1 / (dist+self.e) 
     argm = weight.argmax()
-    return self.y_train[idx[argm]]
+    return self.y[idx[argm]]
     
-  def predict(self,x_test):
-    self.check_is_fitted()
+  def predict(self,X):
     validity = self.validity
-    dist,idx = self.neighbors(x_test)
-    return np.array([self._weight_calculate(dist[i],idx[i],validity[idx[i]]) for i in range(len(x_test))])
+    dist,idx = self.neighbors(X = X)
+    return np.array([self.__weight_calculate(dist[i],idx[i],validity[idx[i]]) for i in range(len(X))])
   
   @property
   def validity(self):
-    self.check_is_fitted()
-    _y = super().predict(self.X_train)
-    return np.array([1 if _y[i] == self.y_train[i] else 0 for i in range(self.n)])
+    _,idx = self.neighbors()
+    __voting = lambda idx : Counter(self.y[idx]).most_common(1)[0][0]
+    _y = np.array([__voting(i) for i in idx])
+    return np.array([1 if _y[i] == self.y[i] else 0 for i in range(self.n)])
 
-
-if __name__ == "__main__":
-  from sklearn.datasets import make_regression
-  from sklearn.neighbors import KNeighborsRegressor
-  from sklearn.metrics import mean_absolute_error,mean_absolute_percentage_error,r2_score
-  np.random.seed(42)
-
-  X,y = make_regression(10000,n_features=100)
-  n = int(0.9 * len(X))
-
-  X_train,y_train = X[:n] , y[:n]
-  X_test,y_test = X[n:], y[n:]
+class KNNRegressor(NearestNeighbor,BaseRegressor):
+  name = "KNNRegressor"
+  t = "regression"
   
-  k = 3
+  def __predict(self,idx): return np.mean(self.y[idx])
 
-  knn_sk = KNeighborsRegressor(n_neighbors=k,metric="euclidean")
-  knn_sk.fit(X_train,y_train)
-  print(knn_sk.score(X_test,y_test))
-
-  knn = KNNRegressor(n_neighbors=k,metric="euclidean")
-  knn.fit(X_train,y_train)
-  print(knn.score(X_test,y_test))
-
-
-
-
-
-
-
-
-  
-
+  def predict(self,X:np.ndarray):
+    _,idx = self.neighbors(X)
+    y_pred = np.array([self.__predict(i) for i in idx])
+    return y_pred
   

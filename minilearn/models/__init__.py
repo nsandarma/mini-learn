@@ -1,3 +1,4 @@
+from minilearn.models._knn import KNN,KNNRegressor,MKNN
 # KNN
 # Naive Bayes
 # Random Forest
