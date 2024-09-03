@@ -29,10 +29,23 @@ def make_clf(n_samples=None,n_features=None,train_size=None,norm=True):
   train_size = random.choice(np.arange(0.6,0.9,0.1))
 
   x = np.random.rand(n_samples,n_features)
-  if norm : x *= 100
+  if not norm : x *= 100
   mean = np.mean([np.sum(i) for i in x])
   y = np.array([0 if np.sum(i) < mean else 1 for i in x])
   
   n = int(train_size * len(x))
   return x[:n],y[:n],x[n:],y[n:]
 
+
+def make_reg(n_samples=None,n_features=None,train_size=None,norm=True):
+  n_samples = random.randrange(50,2000) if n_samples is None else n_samples
+  n_features = random.randrange(10,100) if n_features is None else n_features
+  train_size = random.choice(np.arange(0.6,0.9,0.1))
+
+  x = np.random.rand(n_samples,n_features)
+  if not norm : x *= 100
+  y = np.random.randint(1,200,size=(n_samples,))
+  # y = np.array([np.sum(i)**2 for i in x])
+  
+  n = int(train_size * len(x))
+  return x[:n],y[:n],x[n:],y[n:]

@@ -78,11 +78,20 @@ def roc_curva():pass
 def roc_auc():pass
 
 
+def categorical_crossentropy(y_true:np.ndarray,y_pred:np.ndarray): 
+  # y_true = [[0, 1, 0], [0, 0, 1], [1, 0, 0]])
+  # y_pred = [[0.8, 0.1, 0.1], [0.2, 0.3, 0.5], [0.1, 0.6, 0.3]])
+  return -1/len(y_true) * np.sum(np.sum(y_true * np.log(y_pred) ))
+
+def sparse_categorical_crossentropy(y_true,y_pred):
+  y_true_onehot = np.zeros_like(y_pred)
+  y_true_onehot[np.arange(len(y_true)),y_true] = 1
+  return -np.mean(np.sum(y_true_onehot * np.log(y_pred),axis=-1))
+
+
+
+
 
 
 if __name__ == "__main__":
   pass
-  
-  
-
-  

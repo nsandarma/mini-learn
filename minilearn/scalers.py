@@ -55,13 +55,13 @@ class StandardScaler:
   @property
   def n_features_in_(self) -> int: return len(self.__n_features)
 
-def minmax(X,feature_range=(0,1)): min_,max_ = feature_range; return(X - np.min(X,axis=0)) / (np.max(X,axis=0) - np.min(X,axis=0)) * (max_ - min_) + max_
+def minmax(X:np.ndarray,feature_range:tuple=(0,1)): return MinMaxScaler(feature_range=feature_range).fit_transform(X)
 
-def standard(X): return (X-np.mean(X,axis=0)) / np.std(X,axis=0)
+def standard(X:np.ndarray): return StandardScaler().fit_transform(X)
 
+# !
+def is_scaled(X:np.ndarray)->bool: return False if np.max(X) > 1 else True
 
+    
 
-
-   
- 
-
+  

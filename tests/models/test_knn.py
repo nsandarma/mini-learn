@@ -18,7 +18,7 @@ class TestKNN(unittest.TestCase):
     self.knn_sklearn = KNeighborsClassifier(n_neighbors=self.k,metric=self.metric)
 
   def test_fit(self):
-    knn = self.knn_minilearn.fit(self.x_train,self.x_test)
+    knn = self.knn_minilearn.fit(self.x_train,self.y_train)
     self.assertIsInstance(knn,KNN)
 
   def test_pred(self):

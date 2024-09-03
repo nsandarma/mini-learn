@@ -1,5 +1,5 @@
 from sklearn.preprocessing import StandardScaler as SS,MinMaxScaler as MM
-from minilearn.scalers import StandardScaler,MinMaxScaler
+from minilearn.scalers import StandardScaler,MinMaxScaler,minmax,standard
 import unittest
 import numpy as np
 
@@ -28,6 +28,21 @@ class TestScaler(unittest.TestCase):
     s2 = MM().fit(self.X)
     np.testing.assert_array_equal(s1.inverse_transform(s1.transform(self.X)),s2.inverse_transform(s2.transform(self.X)))
   
+  def test_x_norm(self):
+    X = np.random.rand(10,4)
+    x1 = MinMaxScaler().fit_transform(X)
+    x2 = MM().fit_transform(X)
+    np.testing.assert_array_equal(x1,x2)
+    x1 = StandardScaler().fit_transform(X)
+    x2 = SS().fit_transform(X)
+    np.testing.assert_array_equal(x1,x2)
+  
+  def test_func(self):
+    x1 = minmax(self.X)
+    x2 = MM().fit_transform(self.X)
+    np.testing.assert_array_equal(x1,x2)
+
+
 
   
 if __name__ == "__main__":
