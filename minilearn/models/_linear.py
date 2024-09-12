@@ -1,7 +1,7 @@
 from minilearn.models._base import BaseClassifier,BaseRegressor
 from minilearn.models.__utils import sigmoid,softmax
 from minilearn.scalers import is_scaled,minmax,standard,StandardScaler,MinMaxScaler
-from minilearn.encoders import onehot
+from minilearn.encoders import onehot_encoder
 import numpy as np
 
 
@@ -46,7 +46,7 @@ class LogisticRegression(BaseClassifier):
     intercept_size = (1,) if not self.multiclass else (y_size,)
     self.coef_ = np.zeros(shape=coef_size)
     self.intercept_ = np.zeros(shape=intercept_size) if self.fit_intercept else np.zeros(intercept_size)
-    y = onehot(y) if y_size > 2 else y
+    y = onehot_encoder(y) if y_size > 2 else y
 
     for _ in range(self.n_iters):
       lin = self.linear(x=X)
