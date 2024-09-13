@@ -32,6 +32,7 @@ class MinMaxScaler:
   @property
   def n_features_in_(self) -> int: return len(self.__data_range_)
 
+
 class StandardScaler:
   def __init__(self):
     self.__mean = None
@@ -54,6 +55,7 @@ class StandardScaler:
   
   @property
   def n_features_in_(self) -> int: return len(self.__n_features)
+
 
 def minmax(X:np.ndarray,feature_range:tuple=(0,1)): return MinMaxScaler(feature_range=feature_range).fit_transform(X)
 

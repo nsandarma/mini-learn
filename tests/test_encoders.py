@@ -1,5 +1,5 @@
 import unittest
-from minilearn.encoders import OneHotEncoder,LabelEncoder,OrdinalEncoder
+from minilearn.encoders import OneHotEncoder,LabelEncoder,OrdinalEncoder,TargetEncoder
 import pandas as pd
 from sklearn import preprocessing
 import numpy as np
@@ -139,9 +139,46 @@ class TestOrdinalEncoder(unittest.TestCase):
       enc.transform(s)
     err_msg = "X has 1 features, but OneHotEncoder is expecting 3 features as input."
     self.assertEqual(str(context.exception),err_msg)
-  
+
+
 class TestTargetEncoder(unittest.TestCase):
-  pass
+  def setUp(self):
+    features = ["Drug"]
+    target = "Sex"
+    self.x = df[features].values
+    self.y = df[target].values
+
+  def test_transform(self):
+    smooth = 2
+    enc = TargetEncoder(smooth=smooth).fit(self.x,self.y)
+    x_transform1 = enc.transform(self.x)
+
+    enc = preprocessing.TargetEncoder(smooth=2).fit(self.x,self.y)
+    x_transform2 = enc.transform(self.x)
+
+    np.testing.assert_array_equal(x_transform1,x_transform2)
+  
+  def test_inverse_transform(self):
+    smooth = 2
+    enc = TargetEncoder(smooth=smooth).fit(self.x,self.y)
+    x_transform = enc.transform(self.x)
+    np.testing.assert_array_equal(enc.inverse_transform(x_transform),self.x)
+  
+  def test_performance(self):
+    smooth = 2
+
+    start = time.monotonic()
+    enc = TargetEncoder(smooth=smooth).fit(self.x,self.y)
+    x_transform = enc.transform(self.x)
+    times = time.monotonic() - start
+
+    start = time.monotonic()
+    enc = preprocessing.TargetEncoder(smooth=smooth).fit(self.x,self.y)
+    x_transform = enc.transform(self.x)
+    time_threshold = time.monotonic() - start
+
+    self.assertLess(times,time_threshold)
+    
 
 class TestLabelEncoder(unittest.TestCase):
   def setUp(self):
@@ -175,9 +212,6 @@ class TestLabelEncoder(unittest.TestCase):
     self.assertLess(times,time_threshold)
 
     
-
-
-
 
 if __name__ == "__main__":
   unittest.main()

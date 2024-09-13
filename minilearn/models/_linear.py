@@ -1,6 +1,5 @@
 from minilearn.models._base import BaseClassifier,BaseRegressor
-from minilearn.models.__utils import sigmoid,softmax
-from minilearn.scalers import is_scaled,minmax,standard,StandardScaler,MinMaxScaler
+from minilearn.utils import sigmoid,softmax
 from minilearn.encoders import onehot_encoder
 import numpy as np
 
