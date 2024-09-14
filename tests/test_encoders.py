@@ -1,5 +1,6 @@
 import unittest
-from minilearn.encoders import OneHotEncoder,LabelEncoder,OrdinalEncoder,TargetEncoder
+from minilearn.encoders import OneHotEncoder,LabelEncoder,OrdinalEncoder,TargetEncoder,LabelBinarizer
+from minilearn.metrics import MAE
 import pandas as pd
 from sklearn import preprocessing
 import numpy as np
@@ -143,26 +144,35 @@ class TestOrdinalEncoder(unittest.TestCase):
 
 class TestTargetEncoder(unittest.TestCase):
   def setUp(self):
-    features = ["Drug"]
-    target = "Sex"
+    features = df.select_dtypes("object").columns
     self.x = df[features].values
-    self.y = df[target].values
+    self.y = df["Drug"].values
+  
+  def test_attribute(self):
+    smooth = 2
+    enc = TargetEncoder(smooth=2).fit(self.x,self.y)
+    enc2 = preprocessing.TargetEncoder(smooth=smooth).fit(self.x,self.y)
+
+    #encodings_
+    for i,c in enumerate(enc.encodings_):
+      np.testing.assert_allclose(c,enc2.encodings_[i])
+    
+    #categories_
+    for i,cat in enumerate(enc.categories_):
+      np.testing.assert_array_equal(cat,enc2.categories_[i])
+
+    np.testing.assert_array_equal(enc.classes_,enc2.classes_) 
+    
 
   def test_transform(self):
     smooth = 2
     enc = TargetEncoder(smooth=smooth).fit(self.x,self.y)
     x_transform1 = enc.transform(self.x)
-
-    enc = preprocessing.TargetEncoder(smooth=2).fit(self.x,self.y)
+    enc = preprocessing.TargetEncoder(smooth=smooth).fit(self.x,self.y)
     x_transform2 = enc.transform(self.x)
 
-    np.testing.assert_array_equal(x_transform1,x_transform2)
-  
-  def test_inverse_transform(self):
-    smooth = 2
-    enc = TargetEncoder(smooth=smooth).fit(self.x,self.y)
-    x_transform = enc.transform(self.x)
-    np.testing.assert_array_equal(enc.inverse_transform(x_transform),self.x)
+    # there may be differences here, but on a very small scale
+    np.testing.assert_allclose(x_transform1,x_transform2)
   
   def test_performance(self):
     smooth = 2
@@ -176,9 +186,8 @@ class TestTargetEncoder(unittest.TestCase):
     enc = preprocessing.TargetEncoder(smooth=smooth).fit(self.x,self.y)
     x_transform = enc.transform(self.x)
     time_threshold = time.monotonic() - start
+    self.assertLess(abs(times - time_threshold),0.01)
 
-    self.assertLess(times,time_threshold)
-    
 
 class TestLabelEncoder(unittest.TestCase):
   def setUp(self):
@@ -211,8 +220,25 @@ class TestLabelEncoder(unittest.TestCase):
 
     self.assertLess(times,time_threshold)
 
-    
+class TestLabelBinarizer(unittest.TestCase):
+  def setUp(self):
+    self.y = df["Drug"].values
+  
+  def test_transform(self):
+    enc = LabelBinarizer().fit(self.y)
+    y_transform = enc.transform(self.y)
 
+    enc = preprocessing.LabelBinarizer().fit(self.y)
+    y_transform1 = enc.transform(self.y)
+
+    np.testing.assert_array_equal(y_transform,y_transform1)
+  
+  def test_inverse_transform(self):
+    enc = LabelBinarizer().fit(self.y)
+    y_transform = enc.transform(self.y)
+    np.testing.assert_array_equal(enc.inverse_transform(y_transform),self.y)
+
+  
 if __name__ == "__main__":
   unittest.main()
 

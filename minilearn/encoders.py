@@ -15,13 +15,10 @@ class Encoders:
       self.n_features = x.shape[1] # origin
       c = 0
       idx_col = []
-      n_features_ = []
       for i in range(x.shape[1]):
         n = len(self.categories_[i])
         idx_col.append(range(c,c+n));
         c += n
-        n_features_.append(len(self.categories_[i]))
-      self.n_features_ = n_features_ # pre encoding
       self.idx_cols = idx_col
     else:
       assert x.ndim == 1 , f"should be a 1d array, got an array of shape {x.shape} instead."
@@ -67,6 +64,7 @@ class OneHotEncoder(Encoders):
   def fit(self,x:np.ndarray):
     super().fit(x)
     self.__identity = [np.eye(len(cat)) for cat in self.categories_]
+    self.n_features_ = np.sum([x.shape[1] for x in self.__identity])
     return self
 
   def transform(self,x):
@@ -139,6 +137,11 @@ class TargetEncoder(Encoders):
   def __init__(self,smooth=2,target_type:Literal["auto","binary","multiclass"]="auto"):
     self.smooth = smooth
     self.target_type = target_type
+  
+  def __encoding(self,x,y,cat,target_mean):
+    _,counts = np.unique(x,return_counts=True)
+    cm = np.array([np.mean(y[np.where(x == v)]).item() for v in cat])
+    return (counts * cm + self.smooth * target_mean) / (counts + self.smooth)
 
   def fit(self,x,y):
     super().fit(x)
@@ -154,14 +157,18 @@ class TargetEncoder(Encoders):
       label_binarizer = LabelBinarizer()
       y = label_binarizer.fit_transform(y)
       self.classes_ = label_binarizer.classes_
-    self.target_mean_ = np.mean(y)
+    self.n_features_ = len(self.classes_) * self.n_features
+    self.target_mean_ = np.mean(y,axis=0)
     encodings = []
     for i,cat in enumerate(self.categories_):
       temp = x[:,i]
-      _,counts = np.unique(temp,return_counts=True)
-      cm = np.array([np.mean(y[np.where(temp == v)]).item() for v in cat])
-      smoothed_means = (counts * cm + self.smooth * self.target_mean_) / (counts + self.smooth)
-      encodings.append(smoothed_means)
+      if self.target_type == "multiclass":
+        for j in range(len(self.classes_)):
+          y_temp = y[:,j]
+          target_mean = self.target_mean_[j]
+          encodings.append(self.__encoding(temp,y_temp,cat,target_mean))
+      else:
+        encodings.append(self.__encoding(temp,y,cat,self.target_mean_))
     self.encodings_ = encodings
     return self
   
@@ -169,25 +176,28 @@ class TargetEncoder(Encoders):
     x = np.asarray(x)
     self.check_is_fitted()
     self.check_isin(x)
-    result = np.zeros((x.shape[0],x.shape[1]))
-    for i,cat in enumerate(self.categories_):
-      temp = x[:,i]
-      result[:,i] = self.encodings_[i][np.searchsorted(cat,temp)]
-    return result
+    if self.target_type != "multiclass":
+      result = np.empty((x.shape[0],x.shape[1]))
+      for i,cat in enumerate(self.categories_):
+        temp = x[:,i]
+        result[:,i] = self.encodings_[i][np.searchsorted(cat,temp)]
+      return result
+    else:
+      result = np.empty((x.shape[0], x.shape[1] * len(self.classes_)))
+      col_offset = 0
+      for i, cat in enumerate(self.categories_):
+        temp = x[:, i]
+        if self.target_type == "multiclass":
+          for j in range(len(self.classes_)):
+            res = self.encodings_[col_offset + j][np.searchsorted(cat, temp)]
+            result[:, col_offset + j] = res
+          col_offset += len(self.classes_)
+      return result
   
   def fit_transform(self,x):
     self.fit(x)
     return self.transform(x)
   
-  def inverse_transform(self,x):
-    self.check_is_fitted()
-    result = np.empty((x.shape[0],x.shape[1]),dtype=object)
-    for i,cat in enumerate(self.categories_):
-      temp = x[:,i]
-      idx = [np.where(self.encodings_[i] == v)[0].item() for v in temp]
-      result[:,i] = self.categories_[i][idx]
-    return result
-
 
 class LabelEncoder(Encoders):
   def __str__(self):
