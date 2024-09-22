@@ -3,8 +3,13 @@ from typing import Literal
 from collections import Counter
 
 from minilearn.models._base import BaseClassifier,BaseRegressor
-from minilearn.models.__utils import minhowski_distance
+from minilearn.utils import minhowski_distance
 
+__all__ = [
+  "KNN",
+  "KNNRegressor",
+  "MKNN"
+]
 
 class NearestNeighbor:
   def __init__(self,n_neighbors:int = 5 , metric:Literal["euclidean","manhattan"] ="euclidean") :

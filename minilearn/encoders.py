@@ -1,8 +1,25 @@
 import numpy as np
 from abc import ABC,abstractmethod
-from typing import Literal,Union
-from minilearn.utils import type_of_target
-from collections import OrderedDict
+from typing import Literal,List
+
+__all__ = [
+  "OneHotEncoder",
+  "TargetEncoder",
+  "OrdinalEncoder",
+  "LabelEncoder",
+]
+
+FEATURE_ENCODER = [
+  "OneHotEncoder",
+  "TargetEncoder",
+  "OrdinalEncoder"
+]
+
+TARGET_ENCODER = [
+  "LabelEncoder"
+]
+
+ENCODERS = FEATURE_ENCODER + TARGET_ENCODER
 
 class Encoders:
   is_fitted = False
@@ -13,6 +30,7 @@ class Encoders:
         "Reshape your data either using array.reshape(-1, 1) if your data has a single feature or array.reshape(1, -1) if it contains a single sample."
       self.__categories = [np.unique(x[:,i]) for i in range(x.shape[1])]
       self.n_features = x.shape[1] # origin
+      self.n_features_ = x.shape[1]
       c = 0
       idx_col = []
       for i in range(x.shape[1]):
@@ -64,7 +82,7 @@ class OneHotEncoder(Encoders):
   def fit(self,x:np.ndarray):
     super().fit(x)
     self.__identity = [np.eye(len(cat)) for cat in self.categories_]
-    self.n_features_ = np.sum([x.shape[1] for x in self.__identity])
+    self.n_features_ = np.sum([x.shape[1] for x in self.__identity]).item()
     return self
 
   def transform(self,x):
@@ -103,7 +121,7 @@ class OrdinalEncoder(Encoders):
     return "OrdinalEncoder"
   def __init__(self): ...
 
-  def fit(self,x):
+  def fit(self,x,):
     super().fit(x)
     return self
 
@@ -144,6 +162,7 @@ class TargetEncoder(Encoders):
     return (counts * cm + self.smooth * target_mean) / (counts + self.smooth)
 
   def fit(self,x,y):
+    from minilearn.utils import type_of_target
     super().fit(x)
     y = np.asarray(y)
     assert len(x) == len(y), "len(x) != len(y)"
@@ -157,7 +176,8 @@ class TargetEncoder(Encoders):
       label_binarizer = LabelBinarizer()
       y = label_binarizer.fit_transform(y)
       self.classes_ = label_binarizer.classes_
-    self.n_features_ = len(self.classes_) * self.n_features
+    if self.target_type in ["binary","multiclass"]:
+      self.n_features_ = len(self.classes_) * self.n_features if self.target_type == "multiclass" else self.n_features
     self.target_mean_ = np.mean(y,axis=0)
     encodings = []
     for i,cat in enumerate(self.categories_):
@@ -247,7 +267,46 @@ class LabelBinarizer(Encoders):
     return self.transform(y)
   
   def inverse_transform(self,y): return self.classes_[y] if not self.multiclass else self.classes_[np.argmax(y,axis=1)]
+
+
+class FeatureEncoder:
+  def __init__(self,encoder:Literal["OneHotEncoder","TargetEncoder","OrdinalEncoder"],only_categorical=True):
+    enc =  ["OneHotEncoder,TargetEncoder,OrdinalEncoder"]
+    assert encoder in enc, f"{encoder} not in {enc}"
+    self.encoder = encoder
+    self.only_categorical = only_categorical
+  
+  def __validate_data(self,X,y):
+    dtype = X.dtypes
+    pass
+  
+  def fit(self,X,y=None):
+    if self.encoder == "TargetEncoder": 
+      assert y , "y tidak boleh kosong masbro! "
+      enc = TargetEncoder().fit(X,y)
+    elif self.encoder == "OneHotEncoder":
+      enc = OneHotEncoder().fit(X)
+    else:
+      enc = OrdinalEncoder().fit(X)
+    self.enc = enc
+    return self
+  def transform(self,X):
+    return self.enc.transform(X)
+  def fit_transfomr(self,X,y=None):
+    self.fit(X,y)
+    return self.enc.transform(X)
+  def inverse_transform(self,X):
+    assert self.encoder != "TargetEncoder","TargetEncoder cannot inversetransform"
+    return self.enc.inverse_transform(X)
+
+
+
     
 
 def onehot_encoder(x): return OneHotEncoder().fit_transform(x)
 def label_encoder(x): return np.unique(x),np.array([np.where(np.unique(x) == i)[0] for i in x]).reshape(-1)
+
+
+if __name__ == "__main__":
+  pass
+  

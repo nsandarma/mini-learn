@@ -1,6 +1,7 @@
 from sklearn.datasets import make_classification,make_regression
 import random
 import numpy as np
+import os
 
 
 def load_clf(n_samples=None,n_features=None,n_class=None,train_size=None):
@@ -46,7 +47,70 @@ def make_reg(n_samples=None,n_features=None,train_size=None,norm=True):
   x = np.random.rand(n_samples,n_features)
   if not norm : x *= 100
   y = np.random.randint(1,200,size=(n_samples,))
-  # y = np.array([np.sum(i)**2 for i in x])
   
   n = int(train_size * len(x))
   return x[:n],y[:n],x[n:],y[n:]
+
+
+def read_csv(path,delimiter=",",return_dataset=True): 
+  assert os.path.exists(path) , f"{path} not found!"
+  data = np.genfromtxt(path,delimiter=delimiter,dtype=None,encoding=None,names=True)
+  columns = data.dtype.names
+  def convert_dtype(np_dtype):
+      if np.issubdtype(np_dtype, np.integer):
+          return 'int64'
+      elif np.issubdtype(np_dtype, np.floating):
+          return 'float64'
+      else:
+          return 'object'
+  column_dtypes = {name: convert_dtype(data.dtype[name]) for name in columns}
+  data_ =  np.empty((data.shape[0],len(columns)),dtype="object")
+    
+  for idx,col in enumerate(columns):
+    data_[:,idx] = data[col]
+  if return_dataset: return Dataset(data=data_,column_names=columns,column_dtypes=column_dtypes) 
+  return data_,columns
+
+class Dataset():
+  def __str__(self):
+    return f"<Dataset>"
+
+  def __init__(self,data:np.ndarray,column_names:tuple,column_dtypes=None):
+    self.__data = data
+    self.__columns = column_names
+    self.__dtypes = column_dtypes
+    self.n_samples,self.n_columns = data.shape
+  
+  def fit(self,features,target):
+    assert set(features) <= set(self.columns), f"{features} != {self.columns}"
+    assert target in self.columns , f"target : {target} not in {self.columns}"
+    target_col = self.columns.index(target)
+    feature_col = [self.columns.index(col) for col in features]
+    self.X = self.data[:,feature_col]
+    self.y = self.data[:,target_col]
+  
+  @property
+  def data(self):
+    return self.__data
+  
+  @property
+  def columns(self):
+    return self.__columns
+
+  @property
+  def dtype(self):
+    return self.__data.dtype
+
+  @property
+  def dtypes(self):
+    return self.__dtypes
+
+
+if __name__ == "__main__":
+  df = read_csv("examples/dataset/drug200.csv",return_dataset=True)
+  features = ["Age","Cholesterol"]
+  df.fit(features,"Drug")
+  print(df.data)
+
+  
+    

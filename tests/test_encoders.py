@@ -25,11 +25,20 @@ class TestOneHotEncoder(unittest.TestCase):
 
     np.testing.assert_array_equal(x_transform1,x_transform2)
   
+  def test_attribute(self):
+    enc = OneHotEncoder()
+    enc.fit(self.x)
+    x_transform1 =  enc.transform(self.c)
+    print(enc.n_features_)
+    print(x_transform1.shape)
+  
   def test_inverse_transform(self):
     enc = OneHotEncoder()
     enc.fit(self.x)
     x_transform1 = enc.transform(self.c)
     inverse_transform1 = enc.inverse_transform(x_transform1)
+    print(enc.n_features_)
+    print(enc.n_features)
 
     enc = preprocessing.OneHotEncoder()
     enc.fit(self.x)
@@ -52,7 +61,6 @@ class TestOneHotEncoder(unittest.TestCase):
     time_threshold = time.monotonic() - start
     self.assertLess(times,time_threshold)
     
-  
   def test_checkisin(self):
     # test pesan error ketika x transform tidak ada di x fit (isNotMember)
     x = np.array(["a","b","c"]).reshape(-1,1)
@@ -146,7 +154,7 @@ class TestTargetEncoder(unittest.TestCase):
   def setUp(self):
     features = df.select_dtypes("object").columns
     self.x = df[features].values
-    self.y = df["Drug"].values
+    self.y = df[np.random.choice(["Sex","Drug"])].values
   
   def test_attribute(self):
     smooth = 2
@@ -219,6 +227,7 @@ class TestLabelEncoder(unittest.TestCase):
     time_threshold = time.monotonic() - start
 
     self.assertLess(times,time_threshold)
+
 
 class TestLabelBinarizer(unittest.TestCase):
   def setUp(self):

@@ -3,6 +3,10 @@ from minilearn.utils import sigmoid,softmax
 from minilearn.encoders import onehot_encoder
 import numpy as np
 
+__all__ = [
+  "LinearRegression",
+  "LogisticRegression"
+]
 
 class LinearRegression(BaseRegressor):
   def __init__(self,fit_intercept=True):
@@ -45,7 +49,7 @@ class LogisticRegression(BaseClassifier):
     intercept_size = (1,) if not self.multiclass else (y_size,)
     self.coef_ = np.zeros(shape=coef_size)
     self.intercept_ = np.zeros(shape=intercept_size) if self.fit_intercept else np.zeros(intercept_size)
-    y = onehot_encoder(y) if y_size > 2 else y
+    y = onehot_encoder(y.reshape(-1,1)) if y_size > 2 else y
 
     for _ in range(self.n_iters):
       lin = self.linear(x=X)

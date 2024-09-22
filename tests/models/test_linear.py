@@ -7,8 +7,6 @@ import numpy as np
 
 
 class TestLinearRegression(unittest.TestCase):
-  # def setUp(self) -> None:
-  #   self.x_train,self.y_train,self.x_test,self.y_test = load_reg()
   
   def test_predict(self):
     n_iters = 10

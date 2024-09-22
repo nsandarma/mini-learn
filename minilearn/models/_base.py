@@ -45,6 +45,10 @@ class Base(ABC):
   def check_is_fitted(self):
     assert self.is_fitted,f"{self.name} instance is not fitted yet. Call 'fit' with appropriate arguments before using this"
     return 
+  
+  def _validate_feature(self,X): ...
+    
+
 
       
 class BaseClassifier(Base):
