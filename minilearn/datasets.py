@@ -80,6 +80,13 @@ class Dataset():
     self.__columns = column_names
     self.__dtypes = column_dtypes
     self.n_samples,self.n_columns = data.shape
+    self.is_fitted = False
+
+  def __getitem__(self,columns):
+    # only for columns
+    if isinstance(columns,(list,tuple,set)): idx = [self.columns.index(i) for i in columns]
+    else: idx = self.columns.index(columns)
+    return self.data[:,idx]
   
   def fit(self,features,target):
     assert set(features) <= set(self.columns), f"{features} != {self.columns}"
@@ -88,6 +95,8 @@ class Dataset():
     feature_col = [self.columns.index(col) for col in features]
     self.X = self.data[:,feature_col]
     self.y = self.data[:,target_col]
+    self.is_fitted = True
+    return self
   
   @property
   def data(self):
