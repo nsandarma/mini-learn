@@ -2,6 +2,7 @@ import numpy as np
 from typing import Literal
 from minilearn.encoders import ENCODERS,OneHotEncoder,OrdinalEncoder,TargetEncoder,LabelEncoder
 from collections import OrderedDict
+from minilearn.datasets import Dataset
 
 class Pipeline:
   def __init__(self):...
@@ -20,10 +21,11 @@ class ColumnTransformer:
       return LabelEncoder()
   
   def __columns_validate(self,X):
-    columns_ = self.__columns
-    if not self.__cols_spec:
-      assert np.max(columns_) <= X.shape[1] and np.min(columns_) >= 0
-      return 
+    cols_t = self.__all_cols
+    all_cols = np.arange(X.shape[1])
+    diff = np.setdiff1d(np.array(cols_t),np.array(all_cols))
+    assert diff.size == 0, f"found unknown columns {diff}"
+    return 
 
   def __check_transformers(self,transformers):
     assert transformers, "transformers is None !"
@@ -42,7 +44,6 @@ class ColumnTransformer:
       process_.append(process)
     self.__n_process = n_process_
     self.__process = process_
-    self.__cols_spec = any(isinstance(i,str) for col in columns_ for i in col) # specifying the columns
     self.__columns = columns_
     self.__all_cols = list(set([i for col in columns_ for i in col]))
     assert len(n_process_) == len(process_) 
@@ -66,16 +67,10 @@ class ColumnTransformer:
     self.remainder = remainder
     self.is_fitted = False
     self.verbose = verbose
-  
-  def __check_remainder(self,idx_col_last,diff):
-    if self.remainder == "passthrough":
-      return slice(idx_col_last,idx_col_last+diff)
-    return slice(0,0)
-
 
   def fit(self,X,y=None): 
     X,y = np.asarray(X),np.asarray(y)
-    assert not self.__cols_spec,"Specifying the columns using strings is only supported for dataset. use `fit_from_dataset`"
+    self.__columns_validate(X)
     self.n_cols = X.shape[1]
     columns = self.__columns
     n_process = self.__n_process
@@ -109,11 +104,7 @@ class ColumnTransformer:
     self.__diff = diff
     self.__output_indices["remainder"] = output_remainder
     self.is_fitted = True
-
     return self
-
-  def fit_from_dataset(self,dataset):
-    pass
 
   def transform(self,X):
     self.__check_is_fitted()
@@ -130,10 +121,14 @@ class ColumnTransformer:
       else:
         X_trans = process.transform(X_c)
       X_out[:,self.__output_indices[n]] = X_trans
-    X_out[:,self.__output_indices["remainder"]] = X[:,self.__diff]
+    if self.remainder != "drop": X_out[:,self.__output_indices["remainder"]] = X[:,self.__diff]
     return X_out
 
   @property
   def process(self):
     return self.__process
+  
+  @property
+  def output_indices_(self):
+    return self.__output_indices
 

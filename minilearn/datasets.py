@@ -52,6 +52,7 @@ def make_reg(n_samples=None,n_features=None,train_size=None,norm=True):
   return x[:n],y[:n],x[n:],y[n:]
 
 
+
 def read_csv(path,delimiter=",",return_dataset=True): 
   assert os.path.exists(path) , f"{path} not found!"
   data = np.genfromtxt(path,delimiter=delimiter,dtype=None,encoding=None,names=True)
@@ -71,6 +72,7 @@ def read_csv(path,delimiter=",",return_dataset=True):
   if return_dataset: return Dataset(data=data_,column_names=columns,column_dtypes=column_dtypes) 
   return data_,columns
 
+
 class Dataset():
   def __str__(self):
     return f"<Dataset>"
@@ -82,11 +84,15 @@ class Dataset():
     self.n_samples,self.n_columns = data.shape
     self.is_fitted = False
 
-  def __getitem__(self,columns):
-    # only for columns
-    if isinstance(columns,(list,tuple,set)): idx = [self.columns.index(i) for i in columns]
-    else: idx = self.columns.index(columns)
-    return self.data[:,idx]
+  def __getitem__(self,indexer):
+    if isinstance(indexer,(list,tuple,set)): 
+      indexer = [self.columns.index(i) for i in indexer]
+      return self.data[:,indexer]
+    else: 
+      if isinstance(indexer,str):
+        indexer = self.columns.index(indexer)
+        return self.data[:,indexer]
+      return self.data[indexer]
   
   def fit(self,features,target):
     assert set(features) <= set(self.columns), f"{features} != {self.columns}"
@@ -97,6 +103,7 @@ class Dataset():
     self.y = self.data[:,target_col]
     self.is_fitted = True
     return self
+
   
   @property
   def data(self):
@@ -118,8 +125,9 @@ class Dataset():
 if __name__ == "__main__":
   df = read_csv("examples/dataset/drug200.csv",return_dataset=True)
   features = ["Age","Cholesterol"]
-  df.fit(features,"Drug")
-  print(df.data)
+  df.fit(features=features,target="Drug")
+  print(df["Sex"])
+  
 
   
     
