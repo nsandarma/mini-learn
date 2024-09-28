@@ -1,6 +1,6 @@
 import numpy as np
 from typing import Literal
-from minilearn.encoders import ENCODERS,OneHotEncoder,OrdinalEncoder,TargetEncoder,LabelEncoder
+from minilearn.encoders import FEATURE_ENCODER,OneHotEncoder,OrdinalEncoder,TargetEncoder,LabelEncoder
 from collections import OrderedDict
 from minilearn.datasets import Dataset
 
@@ -9,21 +9,27 @@ class Pipeline:
 
 
 class ColumnTransformer:
-  def __encoder(self,encoder:Literal["OneHotEncoder","OrdinalEncoder","TargetEncoder","LabelEncoder"]):
-    assert encoder in ENCODERS, f"{encoder} not in list encoders : {ENCODERS}" 
-    if encoder == "OneHotEncoder":
-      return OneHotEncoder()
-    elif encoder == "OrdinalEncoder":
-      return OrdinalEncoder()
-    elif encoder == "TargetEncoder":
-      return TargetEncoder()
+  def __encoder(self,encoder):
+    if isinstance(encoder,str):
+      assert encoder in FEATURE_ENCODER, f"{encoder} not in feature_encoders : {FEATURE_ENCODER}" 
+      if encoder == "OneHotEncoder":
+        return OneHotEncoder()
+      elif encoder == "OrdinalEncoder":
+        return OrdinalEncoder()
+      else:
+        return TargetEncoder()
     else:
-      return LabelEncoder()
+      assert isinstance(encoder,(OneHotEncoder,OrdinalEncoder,TargetEncoder)), "encoder not support !"
+      return encoder
+
   
   def __columns_validate(self,X):
     cols_t = self.__all_cols
-    all_cols = np.arange(X.shape[1])
-    diff = np.setdiff1d(np.array(cols_t),np.array(all_cols))
+    if isinstance(X,Dataset):
+      all_cols = X.columns
+    else:
+      all_cols = np.arange(X.shape[1])
+    diff = np.setdiff1d(cols_t,all_cols)
     assert diff.size == 0, f"found unknown columns {diff}"
     return 
 
@@ -36,9 +42,7 @@ class ColumnTransformer:
       assert len(t) == 3 
       n_process,process,columns = t
       assert isinstance(columns,(list,tuple,set)), "columns must sequences"
-      if isinstance(process,str): process = self.__encoder(process)
-      else:
-        assert isinstance(process,object)
+      process = self.__encoder(process)
       columns_.append(columns)
       n_process_.append(n_process)
       process_.append(process)
@@ -58,11 +62,12 @@ class ColumnTransformer:
     return len(cols)
 
   def __init__(self,transformers:list,remainder:Literal["drop","passthrough"]="drop",verbose=False):
-    # format : 
+    # format transformer: 
     # [ (process_name,process,column_names)
     # ]
     assert remainder in ["drop","passthrough"] , f'remainder : {remainder} is not found in ["drop","passthrough"]'
-    self.__check_transformers(transformers=transformers)
+    
+    self.__check_transformers(transformers=transformers) 
     self.transformers = transformers
     self.remainder = remainder
     self.is_fitted = False
@@ -80,13 +85,10 @@ class ColumnTransformer:
       process = self.__process[i]
       X_c = X[:,columns[i]]
       if isinstance(process,TargetEncoder):
-        assert y is not None, "y tidak boleh kosong!"
         process.fit(X_c,y)
       else:
-        if isinstance(process,LabelEncoder):
-          X_c = X_c.reshape(-1)
         process.fit(X_c)
-      # self.__col_out.append(self.__check_col_out(process,columns[i]))
+
       col_out = self.__check_col_out(process,columns[i])
       self.__output_indices[n] = slice(idx,idx + col_out)
       idx += col_out
@@ -105,9 +107,49 @@ class ColumnTransformer:
     self.__output_indices["remainder"] = output_remainder
     self.is_fitted = True
     return self
+  
+  
+  def fit_from_dataset(self,dataset:Dataset):
+    assert isinstance(dataset,Dataset), "dataset is not Dataset Class!"
+    self.__columns_validate(dataset)
+    columns = self.__columns
+    if dataset.is_fitted:
+      y = dataset.y
+    else:
+      y = None
+    self.__output_indices = dict()
+    idx = 0
+    for i,n in enumerate(self.__n_process):
+      process = self.__process[i]
+      X_c = dataset[columns[i]]
+      if isinstance(process,TargetEncoder):
+        assert y is not None,"fit dataset terlebih dahulu!"
+        process.fit(X_c,y)
+      else:
+        process.fit(X_c)
+      col_out = self.__check_col_out(process,columns[i])
+      self.__output_indices[n] = slice(idx,idx + col_out)
+      idx += col_out
+      if self.verbose:
+        print(f"[ColumnTransformer] ....... ({i+1} of {len(self.__n_process)}) Processing {n},")
+      
+    diff = np.setdiff1d(dataset.X_feature_names, np.array(self.__all_cols))
+    if self.remainder == "passthrough" and diff.size > 0:
+      output_remainder = slice(idx,idx+len(diff))
+      size = output_remainder.stop
+    else:
+      output_remainder = slice(0,0)
+      size = idx
+    self.__n_cols = size
+    self.__diff = diff.tolist()
+    self.__output_indices["remainder"] = output_remainder
+    self.is_fitted = True
+    return self
 
   def transform(self,X):
     self.__check_is_fitted()
+    if isinstance(X,Dataset):
+      return self.__transform_from_dataset(X)
     X = np.asarray(X)
     columns = self.__columns
     n_rows,_ = X.shape
@@ -115,14 +157,29 @@ class ColumnTransformer:
     for i,n in enumerate(self.__n_process):
       process = self.__process[i]
       X_c = X[:,columns[i]]
-      if isinstance(process,LabelEncoder):
-        X_c = X_c.reshape(-1)
-        X_trans = process.transform(X_c).reshape(-1,1)
-      else:
-        X_trans = process.transform(X_c)
+      X_trans = process.transform(X_c)
       X_out[:,self.__output_indices[n]] = X_trans
     if self.remainder != "drop": X_out[:,self.__output_indices["remainder"]] = X[:,self.__diff]
     return X_out
+  
+  def __transform_from_dataset(self,dataset:Dataset):
+    columns = self.__columns
+    n_rows,_ = dataset.data.shape
+    X_out = np.empty((n_rows,self.__n_cols),dtype="object")
+    for i,n in enumerate(self.__n_process):
+      process = self.__process[i]
+      X_c = dataset[columns[i]]
+      X_trans = process.transform(X_c)
+      X_out[:,self.__output_indices[n]] = X_trans
+    if self.remainder != "drop": X_out[:,self.__output_indices["remainder"]] = dataset[self.__diff]
+    return X_out
+  
+  def fit_transform(self,X,y=None):
+    if isinstance(X,Dataset):
+      self.fit_from_dataset(X)
+    else:
+      self.fit(X,y)
+    return self.transform(X)
 
   @property
   def process(self):
@@ -132,3 +189,21 @@ class ColumnTransformer:
   def output_indices_(self):
     return self.__output_indices
 
+
+if __name__ == "__main__":
+  from minilearn.datasets import read_csv
+  # Data -> ('Age', 'Sex', 'BP', 'Cholesterol', 'Na_to_K', 'Drug')
+   
+  ds = read_csv("examples/dataset/drug200.csv")
+  cols = ds.columns
+  ds.fit(features = cols[:-1],target=cols[-1])
+  X,y = ds.data[:,:-1],ds.data[:,-1]
+  smooth = 2
+  t = [
+      # ("OrdinalEncoder",x(),[1]),
+      ("OneHotEncoder",OneHotEncoder(),["Sex"]),
+      ("OrdinalEncoder","OrdinalEncoder",["BP"]),
+      ("TargetEncoder","TargetEncoder",["Cholesterol"])
+  ]
+  cl = ColumnTransformer(t,"passthrough").fit_from_dataset(ds)
+  print(cl.transform(ds).shape)

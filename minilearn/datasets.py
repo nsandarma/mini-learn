@@ -1,6 +1,8 @@
 from sklearn.datasets import make_classification,make_regression
 import random
 import numpy as np
+from numpy import dtype
+from typing import Sequence
 import os
 
 
@@ -52,18 +54,17 @@ def make_reg(n_samples=None,n_features=None,train_size=None,norm=True):
   return x[:n],y[:n],x[n:],y[n:]
 
 
-
 def read_csv(path,delimiter=",",return_dataset=True): 
   assert os.path.exists(path) , f"{path} not found!"
   data = np.genfromtxt(path,delimiter=delimiter,dtype=None,encoding=None,names=True)
   columns = data.dtype.names
   def convert_dtype(np_dtype):
       if np.issubdtype(np_dtype, np.integer):
-          return 'int64'
+          return dtype("int64")
       elif np.issubdtype(np_dtype, np.floating):
-          return 'float64'
+          return dtype('float64')
       else:
-          return 'object'
+          return dtype('object')
   column_dtypes = {name: convert_dtype(data.dtype[name]) for name in columns}
   data_ =  np.empty((data.shape[0],len(columns)),dtype="object")
     
@@ -75,7 +76,8 @@ def read_csv(path,delimiter=",",return_dataset=True):
 
 class Dataset():
   def __str__(self):
-    return f"<Dataset>"
+    n_rows,n_cols = self.shape
+    return f"<Dataset rows : {n_rows} | columns : {n_cols}>"
 
   def __init__(self,data:np.ndarray,column_names:tuple,column_dtypes=None):
     self.__data = data
@@ -85,13 +87,13 @@ class Dataset():
     self.is_fitted = False
 
   def __getitem__(self,indexer):
-    if isinstance(indexer,(list,tuple,set)): 
+    if isinstance(indexer,(np.ndarray,list,tuple,set)): 
       indexer = [self.columns.index(i) for i in indexer]
       return self.data[:,indexer]
     else: 
       if isinstance(indexer,str):
-        indexer = self.columns.index(indexer)
-        return self.data[:,indexer]
+        idx = self.columns.index(indexer)
+        return self.data[:,idx].astype(self.dtypes[indexer])
       return self.data[indexer]
   
   def fit(self,features,target):
@@ -101,9 +103,10 @@ class Dataset():
     feature_col = [self.columns.index(col) for col in features]
     self.X = self.data[:,feature_col]
     self.y = self.data[:,target_col]
+    self.X_feature_names = np.array(self.columns)[feature_col]
+    self.y_target_names = np.array(self.columns)[target_col]
     self.is_fitted = True
     return self
-
   
   @property
   def data(self):
@@ -120,14 +123,8 @@ class Dataset():
   @property
   def dtypes(self):
     return self.__dtypes
-
-
-if __name__ == "__main__":
-  df = read_csv("examples/dataset/drug200.csv",return_dataset=True)
-  features = ["Age","Cholesterol"]
-  df.fit(features=features,target="Drug")
-  print(df["Sex"])
   
+  @property
+  def shape(self):
+    return self.data.shape
 
-  
-    
