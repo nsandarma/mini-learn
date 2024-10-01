@@ -25,3 +25,26 @@ def train_test_split(x,y,train_size=0.8,random_state=None):
   x_test,y_test = x[idx[n:]],y[idx[n:]]
   return x_train,y_train,x_test,y_test
 
+def logsumexp(x, axis=None, keepdims=False):
+    """
+    Compute the log of the sum of exponentials of input elements along a given axis.
+    
+    Parameters:
+    - x: Input array
+    - axis: Axis along which to compute the logsumexp. If None, computes over the entire array.
+    - keepdims: If True, retains reduced dimensions with length 1.
+    
+    Returns:
+    - result: The logsumexp value along the specified axis.
+    """
+    xmax = np.max(x, axis=axis, keepdims=True)
+    
+    exp_diff = np.exp(x - xmax)
+    sum_exp = np.sum(exp_diff, axis=axis, keepdims=keepdims)
+    
+    logsumexp_result = np.log(sum_exp) + np.squeeze(xmax, axis=axis)
+    
+    if keepdims:
+        return logsumexp_result
+    else:
+        return np.squeeze(logsumexp_result)

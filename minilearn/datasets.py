@@ -1,58 +1,6 @@
-from sklearn.datasets import make_classification,make_regression
-import random
 import numpy as np
 from numpy import dtype
-from typing import Sequence
 import os
-
-
-def load_clf(n_samples=None,n_features=None,n_class=None,train_size=None):
-  n_samples = random.randrange(50,2000) if n_samples is None else n_samples
-  n_features = random.randrange(10,100) if n_features is None else n_features
-  n_class = random.randrange(2,5) if n_class is None else n_class
-  train_size = random.choice(np.arange(0.6,0.9,0.1)) if train_size is None else train_size
-  n_cluster = 2 if n_class == 2 else 1
-  x,y = make_classification(n_samples=n_samples,n_classes=n_class,n_clusters_per_class=n_cluster,n_features=n_features)
-  n = int(train_size * len(x))
-  return x[:n],y[:n],x[n:],y[n:]
-
-
-def load_reg(n_samples=None,n_features=None,train_size=None):
-  n_samples = random.randrange(50,2000) if n_samples is None else n_samples
-  n_features = random.randrange(10,100) if n_features is None else n_features
-  train_size = random.choice(np.arange(0.6,0.9,0.1)) if train_size is None else train_size
-  x,y = make_regression(n_samples=n_samples,n_features=n_features)
-  n = int(train_size * len(x))
-  return x[:n],y[:n],x[n:],y[n:]
-
-# 2 class (binary)
-def make_clf(n_samples=None,n_features=None,train_size=None,norm=True,seed=42):
-  np.random.seed(seed)
-  n_samples = random.randrange(50,2000) if n_samples is None else n_samples
-  n_features = random.randrange(10,100) if n_features is None else n_features
-  train_size = random.choice(np.arange(0.6,0.9,0.1)) if train_size is None else train_size
-
-  x = np.random.rand(n_samples,n_features)
-  if not norm : x *= 100
-  mean = np.mean([np.sum(i) for i in x])
-  y = np.array([0 if np.sum(i) < mean else 1 for i in x],dtype=int)
-  
-  n = int(train_size * len(x))
-  return x[:n],y[:n],x[n:],y[n:]
-
-
-def make_reg(n_samples=None,n_features=None,train_size=None,norm=True):
-  n_samples = random.randrange(50,2000) if n_samples is None else n_samples
-  n_features = random.randrange(10,100) if n_features is None else n_features
-  train_size = random.choice(np.arange(0.6,0.9,0.1)) if train_size is None else train_size
-
-  x = np.random.rand(n_samples,n_features)
-  if not norm : x *= 100
-  y = np.random.randint(1,200,size=(n_samples,))
-  
-  n = int(train_size * len(x))
-  return x[:n],y[:n],x[n:],y[n:]
-
 
 def read_csv(path,delimiter=",",return_dataset=True): 
   assert os.path.exists(path) , f"{path} not found!"
@@ -127,4 +75,28 @@ class Dataset():
   @property
   def shape(self):
     return self.data.shape
+
+# generate_synthetic_data
+
+def make_classification(n_samples=100,n_features=2,n_classes=2,mean_range=(0,5),std=1.0,random_state=None):
+  if random_state is not None:
+    np.random.seed(random_state)
+  samples_per_class = n_samples // n_classes
+  X = []
+  y = []
+  
+  for class_label in range(n_classes):
+    mean = np.random.uniform(mean_range[0], mean_range[1], n_features)
+    X_class = np.random.normal(loc=mean, scale=std, size=(samples_per_class, n_features))
+    y_label = np.full(samples_per_class,class_label)
+    X.append(X_class)
+    y.append(y_label)
+  X = np.vstack(X)
+  y = np.hstack(y)
+  indices = np.random.permutation(n_samples)
+  return X[indices],y[indices]
+
+
+if __name__ == "__main__":
+  X,y = make_classification(n_features=5,n_classes=2,random_state=42)
 

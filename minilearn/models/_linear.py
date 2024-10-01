@@ -74,3 +74,4 @@ class LogisticRegression(BaseClassifier):
     return np.column_stack((res,pred))
 
   def predict(self,X): return self.predict_proba(X).argmax(1)
+

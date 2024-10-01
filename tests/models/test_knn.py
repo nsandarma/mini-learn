@@ -1,21 +1,22 @@
 import unittest
 from minilearn.models import KNN,KNNRegressor,MKNN
-from minilearn.datasets import load_clf,load_reg
+from examples.dataset import load_clf,load_reg
 from sklearn.neighbors import KNeighborsClassifier,KNeighborsRegressor
 import numpy as np
 import random
+from tests.models import check_attribute_model
 
 
-np.random.seed(42)
 class TestKNN(unittest.TestCase):
   # x_train,y_train,x_test,y_test = load_clf(n_features=10,n_samples=100,n_class=2)
-  x_train,y_train,x_test,y_test = load_clf()
-  k = 2
-  metric = random.choice(["euclidean","manhattan"])
 
   def setUp(self):
+    self.k = 2
+    self.metric = random.choice(["euclidean","manhattan"])
     self.knn_minilearn = KNN(n_neighbors=self.k,metric=self.metric)
     self.knn_sklearn = KNeighborsClassifier(n_neighbors=self.k,metric=self.metric)
+
+    self.x_train,self.y_train,self.x_test,self.y_test = load_clf()
 
   def test_fit(self):
     knn = self.knn_minilearn.fit(self.x_train,self.y_train)
@@ -42,6 +43,12 @@ class TestKNN(unittest.TestCase):
     self.assertLessEqual(diff,lim,"Err!")
     
     print(f"KNN MINILEARN : {np.mean(sc1_)}\nKNN SKLEARN : {np.mean(sc2_)}")
+
+  def test_attribute(self):
+    knn = KNN(n_neighbors=self.k,metric=self.metric).fit(self.x_train,self.y_train)
+    print(knn.classes_)
+    check_attribute_model(knn,self.x_train,self.y_train)
+
   
   def test_pred_prob(self):
     k = random.randint(2,6)
@@ -59,9 +66,10 @@ class TestKNN(unittest.TestCase):
 
 class TestKNNRegressor(unittest.TestCase):
   # x_train,y_train,x_test,y_test = load_clf(n_features=10,n_samples=100,n_class=2)
-  x_train,y_train,x_test,y_test = load_reg()
-  k = 2
-  metric = "euclidean"
+  def setUp(self):
+    self.x_train,self.y_train,self.x_test,self.y_test = load_reg(n_features=10)
+    self.k = 2
+    self.metric = "euclidean"
   def test_pred(self):
     metric = self.metric
     sc1_,sc2_ = [],[]
@@ -82,6 +90,12 @@ class TestKNNRegressor(unittest.TestCase):
     self.assertLessEqual(diff,lim,"Err!")
     
     print(f"KNNReg MINILEARN : {np.mean(sc1_)}\nKNNReg SKLEARN : {np.mean(sc2_)}")
+
+  def test_attribute(self):
+    knn = KNNRegressor(self.k,self.metric).fit(self.x_train,self.y_train)
+    check_attribute_model(knn,self.x_train,self.y_train)
+
+
 
 
 

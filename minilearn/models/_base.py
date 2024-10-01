@@ -38,25 +38,16 @@ class Base(ABC):
     params = [name for name in init_signature.parameters if name != 'self']
     return {p:getattr(self,p) for p in params}
   
-  @property
-  def n_features_in_(self) -> int:
-    return self.X.shape[1]
+  # @property
+  # def n_features_in_(self) -> int:
+  #   return self.X.shape[1]
   
   def check_is_fitted(self):
     assert self.is_fitted,f"{self.name} instance is not fitted yet. Call 'fit' with appropriate arguments before using this"
     return 
-  
-  def _validate_feature(self,X): ...
-    
 
-
-      
 class BaseClassifier(Base):
   def score(self,X,y):return accuracy(y_true=y,y_pred=self.predict(X))
 
-  @property
-  def classes_(self): self.check_is_fitted(); return np.unique(self.y)
-
 class BaseRegressor(Base):
-
   def score(self,X,y):return r2(y_true=y,y_pred=self.predict(X))

@@ -1,7 +1,7 @@
 import unittest 
 
 from minilearn.models import LinearRegression,LogisticRegression
-from minilearn.datasets import load_reg,load_clf
+from examples.dataset import load_reg,load_clf
 from sklearn import linear_model
 import numpy as np
 
@@ -19,6 +19,7 @@ class TestLinearRegression(unittest.TestCase):
       np.testing.assert_array_equal(pred1.round(5),pred2.round(5))
 
 class TestLogisticRegression(unittest.TestCase):
+
   def test_predict(self):
     n_iters = 10
     sc1 = []

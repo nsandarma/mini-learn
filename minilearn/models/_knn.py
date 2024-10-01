@@ -20,6 +20,9 @@ class NearestNeighbor:
   def fit(self,X:np.ndarray,y:np.ndarray):
     assert len(X) == len(y) , "len is not same !"
     self.X = X
+    self.n_samples_,self.n_features_in_ = X.shape
+    if BaseClassifier in self.__class__.__bases__:
+      self.classes_,self.class_count_ = np.unique(y,return_counts=True)
     self.y = y
     self.n = len(X)
     self.is_fitted = True
