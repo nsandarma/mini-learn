@@ -56,6 +56,14 @@ class Dataset():
     self.is_fitted = True
     return self
   
+  def save(self,filename):
+    with open(filename,"wb") as f:
+      np.save(f,self.data)
+  
+  def save_obj(self,filename):
+    pass
+      
+  
   @property
   def data(self):
     return self.__data

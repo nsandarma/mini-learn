@@ -16,7 +16,16 @@ class TestLinearRegression(unittest.TestCase):
       pred1 = model.predict(x_test)
       model  = linear_model.LinearRegression().fit(x_train,y_train)
       pred2 = model.predict(x_test)
-      np.testing.assert_array_equal(pred1.round(5),pred2.round(5))
+      np.testing.assert_allclose(pred1,pred2)
+
+  def test_attribute(self):
+    x_train,y_train,x_test,y_test = load_reg(n_samples=100,n_features=2)
+    model = LinearRegression(fit_intercept=False).fit(x_train,y_train)
+    modelr = linear_model.LinearRegression(fit_intercept=False).fit(x_train,y_train)
+    np.testing.assert_allclose(model.coef_,modelr.coef_)
+    np.testing.assert_allclose(model.intercept_,modelr.intercept_)
+
+    
 
 class TestLogisticRegression(unittest.TestCase):
 

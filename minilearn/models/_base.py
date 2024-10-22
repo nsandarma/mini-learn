@@ -51,3 +51,6 @@ class BaseClassifier(Base):
 
 class BaseRegressor(Base):
   def score(self,X,y):return r2(y_true=y,y_pred=self.predict(X))
+
+class BaseCluster(Base):
+  pass

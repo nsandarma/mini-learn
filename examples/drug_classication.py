@@ -1,48 +1,30 @@
-import pandas as pd
-from minilearn.models import KNN,LogisticRegression
-from sklearn import naive_bayes
-from minilearn.encoders import OneHotEncoder,LabelBinarizer,LabelEncoder,TargetEncoder,OrdinalEncoder
+from minilearn.datasets import read_csv
 from minilearn.utils import train_test_split
-from minilearn.metrics import accuracy
+from minilearn.models import LogisticRegression
+from minilearn.scalers import MinMaxScaler
+from minilearn.encoders import LabelEncoder
+from minilearn.pipeline import ColumnTransformer
+from sklearn import linear_model
 import numpy as np
 
-from minilearn.models._naive_bayes import NaiveBayes
-
-df = pd.read_csv("examples/dataset/drug200.csv")
 
 
-features = ["Sex","Cholesterol","BP","Na_to_K","Age"]
-target = "Drug"
-
-X = df[features].values
-y = df[target].values
+ds = read_csv("examples/dataset/drug200.csv")
+ds.fit(ds.columns[:-1],ds.columns[-1])
 
 
+t = [
+  ("target_encoder","TargetEncoder",["Sex","BP","Cholesterol"])
+]
 
-x_cat = X[:,0:3]
+cl = ColumnTransformer(t,remainder="passthrough").fit_from_dataset(ds)
+data = MinMaxScaler().fit_transform(cl.transform(ds))
+y = ds.y.reshape(-1,1)
+data = np.column_stack([data,y]).astype(np.float64)
+print(data.dtype)
 
-enc = OrdinalEncoder().fit(x_cat)
-x_cat_transform = enc.transform(x_cat)
-
-
-X[:,0:3] = x_cat_transform
-enc = LabelEncoder().fit(y)
-y = enc.transform(y)
-
-
-x_train,y_train,x_test,y_test = train_test_split(X,y)
-print(np.stda())
-
-# nb = NaiveBayes()
-# nb.fit(x_train,y_train)
-# pred = nb.predict(x_test)
-# print(accuracy(y_test,pred))
-
-# nb = naive_bayes.GaussianNB()
-# nb.fit(x_train,y_train)
-# pred = nb.predict(x_test)
-# print(accuracy(y_test,pred))
-
+# with open("drug200.npy","wb") as f:
+#   np.save(f,data,allow_pickle=True)
 
 
 

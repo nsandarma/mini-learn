@@ -19,13 +19,13 @@ class LinearRegression(BaseRegressor):
   def fit(self,X,y):
     if self.fit_intercept:
       X = self.__add_intercept(X)
-    self.__theta = np.linalg.inv(X.T.dot(X)).dot(X.T).dot(y)
+    theta = np.linalg.inv(X.T.dot(X)).dot(X.T).dot(y)
+    self.intercept_ = theta[0] if self.fit_intercept else 0.0
+    self.__theta = theta[1:] if self.fit_intercept else theta
     return self
 
   def predict(self,X):
-    if self.fit_intercept:
-      X = self.__add_intercept(X)
-    return X.dot(self.__theta)
+    return X.dot(self.__theta) + self.intercept_
 
   @property
   def coef_(self)->np.ndarray:
