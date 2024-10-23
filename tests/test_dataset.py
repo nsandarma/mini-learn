@@ -10,7 +10,6 @@ class TestDataset(unittest.TestCase):
     self.dataset = read_csv(path)
     self.dataframe = pd.read_csv(path)
     
-
   def test_dtypes(self):
     dtypes_df = self.dataframe.dtypes.values
     dtypes= self.dataset.dtypes
@@ -18,17 +17,10 @@ class TestDataset(unittest.TestCase):
 
   def test_getitem(self):
     cols_selected = ["Sex","BP"]
-    ta = "Drug"
-    start  = time.monotonic()
-    self.dataset[cols_selected]
-    end = round(time.monotonic() - start,5)
-    print(f"times : {end}")
+    
+    self.dataset.dropna()
 
-    start  = time.monotonic()
-    self.dataframe[cols_selected]
-    end = round(time.monotonic() - start,5)
-    print(f"times : {end}")
-
+    
     
 
 

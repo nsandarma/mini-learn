@@ -2,25 +2,35 @@ import numpy as np
 from numpy import dtype
 import os
 
-def read_csv(path,delimiter=",",return_dataset=True): 
-  assert os.path.exists(path) , f"{path} not found!"
-  data = np.genfromtxt(path,delimiter=delimiter,dtype=None,encoding=None,names=True)
+def read_csv(path, delimiter=",", return_dataset=True):
+  # Memastikan file ada
+  assert os.path.exists(path), f"{path} not found!"
+  
+  # Membaca CSV menggunakan genfromtxt, mengisi nilai kosong dengan np.nan
+  data = np.genfromtxt(path,
+   delimiter=delimiter, 
+   dtype = None,
+   encoding=None, 
+   names=True, 
+   missing_values='', 
+   usemask=False,
+   filling_values=0,
+  )
+  
   columns = data.dtype.names
-  def convert_dtype(np_dtype):
-      if np.issubdtype(np_dtype, np.integer):
-          return dtype("int64")
-      elif np.issubdtype(np_dtype, np.floating):
-          return dtype('float64')
-      else:
-          return dtype('object')
-  column_dtypes = {name: convert_dtype(data.dtype[name]) for name in columns}
-  data_ =  np.empty((data.shape[0],len(columns)),dtype="object")
-    
-  for idx,col in enumerate(columns):
-    data_[:,idx] = data[col]
-  if return_dataset: return Dataset(data=data_,column_names=columns,column_dtypes=column_dtypes) 
-  return data_,columns
 
+  column_dtypes = {name: ('int64' if np.issubdtype(data.dtype[name], np.integer) else
+                          'float64' if np.issubdtype(data.dtype[name], np.floating) else
+                          'object')
+                   for name in columns}
+
+  data_ = np.array([tuple(row) for row in data], dtype='object')
+  data_[data_ == ''] = np.nan
+  
+  if return_dataset:
+    return Dataset(data=data_, column_names=columns, column_dtypes=column_dtypes)
+
+  return data_, columns
 
 class Dataset():
   def __str__(self):
@@ -56,13 +66,22 @@ class Dataset():
     self.is_fitted = True
     return self
   
+  def head(self,samples=5):
+    samples = abs(samples)
+    if samples > self.n_samples: samples = self.n_samples
+    return self[:samples]
+
+  def tail(self,samples=5):
+    if samples > 0 : samples = -samples
+    if samples < -self.n_samples: samples = -self.n_samples
+    return self[samples:]
+
   def save(self,filename):
     with open(filename,"wb") as f:
       np.save(f,self.data)
   
   def save_obj(self,filename):
     pass
-      
   
   @property
   def data(self):
@@ -83,6 +102,7 @@ class Dataset():
   @property
   def shape(self):
     return self.data.shape
+  
 
 # generate_synthetic_data
 
