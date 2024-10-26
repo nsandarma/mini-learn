@@ -3,6 +3,14 @@ from minilearn.datasets import Dataset,read_csv
 import pandas as pd
 import numpy as np
 
+def set_missing_values(dataframe,nums):
+  rows,cols = dataframe.values.shape
+  for i in range(nums):
+    idx = np.random.randint(0,rows)
+    col = np.random.randint(0,cols)
+    dataframe.iloc[idx,col] = np.nan
+  
+
 class TestDataset(unittest.TestCase):
   def setUp(self):
     self.p_drug = "examples/dataset/drug200.csv"
@@ -10,20 +18,49 @@ class TestDataset(unittest.TestCase):
     self.dataframe = pd.read_csv(self.p_drug)
     
   def test_dtypes(self):
-    dtypes_df = self.dataframe.dtypes.values
-    dtypes= self.dataset.dtypes
-    print(dtypes_df)
+    dtypes_df = self.dataframe.dtypes.to_dict()
+    dtypes_ds = self.dataset.dtypes
+    self.assertDictEqual(dtypes_df,dtypes_ds)
+
+    dd_ds = []
+    dd_df = []
+
+    for col in self.dataset.columns:
+      dd_ds.append(self.dataset[col].dtype)
+      dd_df.append(self.dataframe[col].dtype)
+    np.testing.assert_array_equal(dd_ds,dd_df)
+
 
   def test_getitem(self):
     cols_selected = ["Sex","Age"]
     ds_cols_selected = self.dataset[cols_selected]
     df_cols_selected = self.dataframe[cols_selected].values
-    np.testing.assert_equal(ds_cols_selected,df_cols_selected)
-
+    np.testing.assert_array_equal(ds_cols_selected,df_cols_selected)
 
     ds_idx_selected = self.dataset[1:5]
     df_idx_selected = self.dataframe.iloc[1:5].values
     np.testing.assert_equal(ds_idx_selected,df_idx_selected)
+
+  def test_isna(self):
+    set_missing_values(self.dataframe,10)
+    df_isna = self.dataframe.isna().sum().to_dict()
+
+    data = self.dataframe.values
+    cols = self.dataframe.columns.tolist()
+    dtypes = self.dataframe.dtypes.tolist()
+
+    ds = Dataset(data=data,column_names=cols,column_dtypes=dtypes)
+    self.assertDictEqual(df_isna,ds.isna())
+
+  def test_drop(self):
+    col_selected = ["Sex","Drug"]
+    ds_remove = self.dataset.drop(columns=col_selected,inplace=False)
+    df_remove = self.dataframe.drop(columns=col_selected,inplace=False)
+    np.testing.assert_array_equal(ds_remove.data,df_remove.values)
+
+
+
+
 
 
 if __name__ == "__main__":

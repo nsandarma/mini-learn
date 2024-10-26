@@ -19,10 +19,12 @@ def read_csv(path, delimiter=",", return_dataset=True):
   
   columns = data.dtype.names
 
-  column_dtypes = {name: ('int64' if np.issubdtype(data.dtype[name], np.integer) else
-                          'float64' if np.issubdtype(data.dtype[name], np.floating) else
-                          'object')
-                   for name in columns}
+  # NOTES: columns_dtypes -> list
+
+  column_dtypes = [(np.dtype("int64") if np.issubdtype(data.dtype[name], np.integer) else
+                          np.dtype("float64") if np.issubdtype(data.dtype[name], np.floating) else
+                          np.dtype("O"))
+                   for name in columns]
 
   data_ = np.array([tuple(row.item()) for row in data], dtype='object')
   data_[data_ == ''] = np.nan
@@ -94,7 +96,8 @@ class Dataset():
       assert isinstance(columns,(list,np.ndarray,tuple,set)), "type(columns) !"
       index = np.isin(self.columns,columns) 
       columns = np.delete(self.columns,index,0)
-      dtypes = np.delete(self.dtypes,index,0)
+      dtypes = np.delete(self.__dtypes,index,0)
+
       data = np.delete(self.data,index,1)
 
       if inplace:
@@ -146,7 +149,7 @@ class Dataset():
 
   @property
   def dtypes(self):
-    return self.__dtypes
+    return {col:dtype for col,dtype in zip(self.columns,self.__dtypes)}
   
   @property
   def shape(self):
