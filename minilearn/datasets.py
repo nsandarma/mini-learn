@@ -1,6 +1,7 @@
 import numpy as np
 from numpy import dtype
 import os
+from typing import Union
 
 def read_csv(path, delimiter=",", return_dataset=True):
   # Memastikan file ada
@@ -13,7 +14,6 @@ def read_csv(path, delimiter=",", return_dataset=True):
    encoding=None, 
    names=True, 
    missing_values='', 
-   usemask=False,
    filling_values=0,
   )
   
@@ -24,7 +24,7 @@ def read_csv(path, delimiter=",", return_dataset=True):
                           'object')
                    for name in columns}
 
-  data_ = np.array([tuple(row) for row in data], dtype='object')
+  data_ = np.array([tuple(row.item()) for row in data], dtype='object')
   data_[data_ == ''] = np.nan
   
   if return_dataset:
@@ -75,6 +75,55 @@ class Dataset():
     if samples > 0 : samples = -samples
     if samples < -self.n_samples: samples = -self.n_samples
     return self[samples:]
+  
+  def isna(self,return_counts=True):
+    data_ = self.data
+    # Menggunakan np.vectorize untuk memeriksa np.nan
+    is_nan = np.vectorize(lambda x: isinstance(x, float) and np.isnan(x))
+    is_nan = is_nan(data_)
+    if return_counts:
+      result = {}
+      for idx,col in enumerate(self.columns):
+        result[col] = sum(is_nan[:,idx]).item()
+      return result
+    return is_nan
+
+  def drop(self,index=None,columns=None,axis=0,inplace=False):
+    axis = 1 if columns  else axis
+    if axis == 1:
+      assert isinstance(columns,(list,np.ndarray,tuple,set)), "type(columns) !"
+      index = np.isin(self.columns,columns) 
+      columns = np.delete(self.columns,index,0)
+      dtypes = np.delete(self.dtypes,index,0)
+      data = np.delete(self.data,index,1)
+
+      if inplace:
+        self.__columns = columns
+        self.__dtypes = dtypes
+        self.__data = data
+        return 
+      return Dataset(data,columns,dtypes)
+
+    else:
+      assert isinstance(index,(list,np.ndarray,tuple,set)), "type(columns) !"
+      data = np.delete(self.data,index,0)
+      if inplace:
+        self.__data = data
+        return 
+      return Dataset(data,self.columns,self.dtypes)
+
+
+  def dropna(self,axis=0,inplace=False):
+    is_nan = self.isna(return_counts=axis)
+    if axis == 1:
+      cols_nan = [cols for cols,values in is_nan.items() if values != 0]
+      assert cols_nan , "no missing values!"
+      return self.drop(columns=cols_nan,inplace=inplace)
+    else:
+      idx_nan = np.where(is_nan)[0]
+      print(idx_nan)
+      return self.drop(index=idx_nan,axis=0,inplace=inplace)
+
 
   def save(self,filename):
     with open(filename,"wb") as f:
