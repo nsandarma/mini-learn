@@ -30,31 +30,51 @@ def read_csv(path, delimiter=",", return_dataset=True):
   data_[data_ == ''] = np.nan
   
   if return_dataset:
-    return Dataset(data=data_, column_names=columns, column_dtypes=column_dtypes)
+    return Dataset(data=data_, columns=columns, dtypes=column_dtypes)
 
   return data_, columns
 
 class Dataset():
+
   def __str__(self):
     n_rows,n_cols = self.shape
     return f"<Dataset rows : {n_rows} | columns : {n_cols}>"
 
-  def __init__(self,data:np.ndarray,column_names:tuple,column_dtypes=None):
+  def __repr__(self):
+    return str(self)
+
+  def __init__(self,data:np.ndarray,columns:tuple,dtypes=None):
     self.__data = data
-    self.__columns = column_names
-    self.__dtypes = column_dtypes
+    self.__columns = tuple(columns) if  not isinstance(columns,tuple)  else columns
+    self.__dtypes = tuple(dtypes) if not isinstance(dtypes,tuple) else dtypes
     self.n_samples,self.n_columns = data.shape
     self.is_fitted = False
 
   def __getitem__(self,indexer):
-    if isinstance(indexer,(np.ndarray,list,tuple,set)): 
+    if isinstance(indexer,(np.ndarray,list,tuple,set)) and all(isinstance(i,str) for i in indexer): 
       indexer = [self.columns.index(i) for i in indexer]
       return self.data[:,indexer]
     else: 
-      if isinstance(indexer,str):
+      if isinstance(indexer,str): 
         idx = self.columns.index(indexer)
         return self.data[:,idx].astype(self.dtypes[indexer])
       return self.data[indexer]
+
+  def get(self,indexer):
+    if isinstance(indexer,(np.ndarray,list,tuple,set)) and all(isinstance(i,str) for i in indexer): 
+      idx = [self.columns.index(i) for i in indexer]
+      data = self.data[:,idx]
+      dtypes = [self.__dtypes[i] for i in idx]
+      return Dataset(data,indexer,dtypes)
+    else: 
+      if isinstance(indexer,str): 
+        idx = self.columns.index(indexer)
+        data = self.data[:,[idx]].astype(self.dtypes[indexer])
+        dtypes = [self.dtypes[indexer]]
+        return Dataset(data,[indexer],dtypes)
+      data = self[indexer]
+      return Dataset(data,self.columns,self.__dtypes)
+
   
   def fit(self,features,target):
     assert set(features) <= set(self.columns), f"{features} != {self.columns}"
@@ -90,6 +110,7 @@ class Dataset():
       return result
     return is_nan
 
+
   def drop(self,index=None,columns=None,axis=0,inplace=False):
     axis = 1 if columns  else axis
     if axis == 1:
@@ -124,7 +145,6 @@ class Dataset():
       return self.drop(columns=cols_nan,inplace=inplace)
     else:
       idx_nan = np.where(is_nan)[0]
-      print(idx_nan)
       return self.drop(index=idx_nan,axis=0,inplace=inplace)
 
 

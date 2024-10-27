@@ -41,6 +41,11 @@ class TestDataset(unittest.TestCase):
     df_idx_selected = self.dataframe.iloc[1:5].values
     np.testing.assert_equal(ds_idx_selected,df_idx_selected)
 
+    idx_selected = [1,2,3,4,5]
+    ds_idx_selected = self.dataset[idx_selected]
+    df_idx_selected = self.dataframe.values[idx_selected]
+    np.testing.assert_array_equal(ds_idx_selected,df_idx_selected)
+
   def test_isna(self):
     set_missing_values(self.dataframe,10)
     df_isna = self.dataframe.isna().sum().to_dict()
@@ -49,16 +54,37 @@ class TestDataset(unittest.TestCase):
     cols = self.dataframe.columns.tolist()
     dtypes = self.dataframe.dtypes.tolist()
 
-    ds = Dataset(data=data,column_names=cols,column_dtypes=dtypes)
+    ds = Dataset(data=data,columns=cols,dtypes=dtypes)
     self.assertDictEqual(df_isna,ds.isna())
 
   def test_drop(self):
     col_selected = ["Sex","Drug"]
+    idx_selected = [0,2,4]
     ds_remove = self.dataset.drop(columns=col_selected,inplace=False)
     df_remove = self.dataframe.drop(columns=col_selected,inplace=False)
     np.testing.assert_array_equal(ds_remove.data,df_remove.values)
 
+    ds_remove = self.dataset.drop(index=idx_selected,axis=0,inplace=False)
+    df_remove = self.dataframe.drop(index=idx_selected,axis=0,inplace=False)
+    np.testing.assert_array_equal(ds_remove.data,df_remove.values)
 
+  def test_get(self):
+    # by column names
+    cols_selected = ["Sex","Age","Na_to_K"]
+    ds = self.dataset.get(cols_selected)
+    np.testing.assert_array_equal(ds.columns,cols_selected)
+    dty = {col:self.dataset.dtypes[col] for col in cols_selected}
+    self.assertDictEqual(dty,ds.dtypes)
+    np.testing.assert_array_equal(self.dataset[cols_selected],ds.data)
+
+    # by index
+    idx_selected = [1,2,3,4]
+    ds = self.dataset.get(idx_selected)
+    np.testing.assert_array_equal(ds.columns,self.dataset.columns)
+    self.assertDictEqual(ds.dtypes,self.dataset.dtypes)
+    np.testing.assert_array_equal(ds.data,self.dataset[idx_selected])
+
+    
 
 
 
