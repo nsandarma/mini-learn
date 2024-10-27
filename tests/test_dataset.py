@@ -62,11 +62,11 @@ class TestDataset(unittest.TestCase):
     idx_selected = [0,2,4]
     ds_remove = self.dataset.drop(columns=col_selected,inplace=False)
     df_remove = self.dataframe.drop(columns=col_selected,inplace=False)
-    np.testing.assert_array_equal(ds_remove.data,df_remove.values)
+    np.testing.assert_array_equal(ds_remove.values,df_remove.values)
 
     ds_remove = self.dataset.drop(index=idx_selected,axis=0,inplace=False)
     df_remove = self.dataframe.drop(index=idx_selected,axis=0,inplace=False)
-    np.testing.assert_array_equal(ds_remove.data,df_remove.values)
+    np.testing.assert_array_equal(ds_remove.values,df_remove.values)
 
   def test_get(self):
     # by column names
@@ -75,18 +75,16 @@ class TestDataset(unittest.TestCase):
     np.testing.assert_array_equal(ds.columns,cols_selected)
     dty = {col:self.dataset.dtypes[col] for col in cols_selected}
     self.assertDictEqual(dty,ds.dtypes)
-    np.testing.assert_array_equal(self.dataset[cols_selected],ds.data)
+    np.testing.assert_array_equal(self.dataset[cols_selected],ds.values)
 
     # by index
     idx_selected = [1,2,3,4]
     ds = self.dataset.get(idx_selected)
     np.testing.assert_array_equal(ds.columns,self.dataset.columns)
     self.assertDictEqual(ds.dtypes,self.dataset.dtypes)
-    np.testing.assert_array_equal(ds.data,self.dataset[idx_selected])
+    np.testing.assert_array_equal(ds.values,self.dataset[idx_selected])
 
     
-
-
 
 
 if __name__ == "__main__":

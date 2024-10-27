@@ -38,7 +38,11 @@ class Dataset():
 
   def __str__(self):
     n_rows,n_cols = self.shape
-    return f"<Dataset rows : {n_rows} | columns : {n_cols}>"
+    missing_values = sum(self.isna().values())
+    text = f"<Dataset rows : {n_rows} | columns : {n_cols}>"
+    if missing_values:
+      text += f" | missing values : {missing_values}"
+    return text
 
   def __repr__(self):
     return str(self)
@@ -48,45 +52,32 @@ class Dataset():
     self.__columns = tuple(columns) if  not isinstance(columns,tuple)  else columns
     self.__dtypes = tuple(dtypes) if not isinstance(dtypes,tuple) else dtypes
     self.n_samples,self.n_columns = data.shape
-    self.is_fitted = False
 
   def __getitem__(self,indexer):
     if isinstance(indexer,(np.ndarray,list,tuple,set)) and all(isinstance(i,str) for i in indexer): 
       indexer = [self.columns.index(i) for i in indexer]
-      return self.data[:,indexer]
+      return self.values[:,indexer]
     else: 
       if isinstance(indexer,str): 
         idx = self.columns.index(indexer)
-        return self.data[:,idx].astype(self.dtypes[indexer])
-      return self.data[indexer]
+        return self.values[:,idx].astype(self.dtypes[indexer])
+      return self.values[indexer]
 
   def get(self,indexer):
     if isinstance(indexer,(np.ndarray,list,tuple,set)) and all(isinstance(i,str) for i in indexer): 
       idx = [self.columns.index(i) for i in indexer]
-      data = self.data[:,idx]
+      data = self.values[:,idx]
       dtypes = [self.__dtypes[i] for i in idx]
       return Dataset(data,indexer,dtypes)
     else: 
       if isinstance(indexer,str): 
         idx = self.columns.index(indexer)
-        data = self.data[:,[idx]].astype(self.dtypes[indexer])
+        data = self.values[:,[idx]].astype(self.dtypes[indexer])
         dtypes = [self.dtypes[indexer]]
         return Dataset(data,[indexer],dtypes)
       data = self[indexer]
       return Dataset(data,self.columns,self.__dtypes)
 
-  
-  def fit(self,features,target):
-    assert set(features) <= set(self.columns), f"{features} != {self.columns}"
-    assert target in self.columns , f"target : {target} not in {self.columns}"
-    target_col = self.columns.index(target)
-    feature_col = [self.columns.index(col) for col in features]
-    self.X = self.data[:,feature_col]
-    self.y = self.data[:,target_col]
-    self.X_feature_names = np.array(self.columns)[feature_col]
-    self.y_target_names = np.array(self.columns)[target_col]
-    self.is_fitted = True
-    return self
   
   def head(self,samples=5):
     samples = abs(samples)
@@ -99,7 +90,7 @@ class Dataset():
     return self[samples:]
   
   def isna(self,return_counts=True):
-    data_ = self.data
+    data_ = self.values
     # Menggunakan np.vectorize untuk memeriksa np.nan
     is_nan = np.vectorize(lambda x: isinstance(x, float) and np.isnan(x))
     is_nan = is_nan(data_)
@@ -119,7 +110,7 @@ class Dataset():
       columns = np.delete(self.columns,index,0)
       dtypes = np.delete(self.__dtypes,index,0)
 
-      data = np.delete(self.data,index,1)
+      data = np.delete(self.values,index,1)
 
       if inplace:
         self.__columns = columns
@@ -130,7 +121,7 @@ class Dataset():
 
     else:
       assert isinstance(index,(list,np.ndarray,tuple,set)), "type(columns) !"
-      data = np.delete(self.data,index,0)
+      data = np.delete(self.values,index,0)
       if inplace:
         self.__data = data
         return 
@@ -150,13 +141,13 @@ class Dataset():
 
   def save(self,filename):
     with open(filename,"wb") as f:
-      np.save(f,self.data)
+      np.save(f,self.values)
   
   def save_obj(self,filename):
     pass
   
   @property
-  def data(self):
+  def values(self):
     return self.__data
   
   @property
@@ -173,7 +164,7 @@ class Dataset():
   
   @property
   def shape(self):
-    return self.data.shape
+    return self.values.shape
   
 
 # generate_synthetic_data
@@ -199,4 +190,3 @@ def make_classification(n_samples=100,n_features=2,n_classes=2,mean_range=(0,5),
 
 if __name__ == "__main__":
   X,y = make_classification(n_features=5,n_classes=2,random_state=42)
-
