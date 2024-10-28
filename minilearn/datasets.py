@@ -78,6 +78,18 @@ class Dataset():
       data = self[indexer]
       return Dataset(data,self.columns,self.__dtypes)
 
+  def select_dtypes(self,include=None,exclude=None):
+    dtype = np.dtype(include) if include else np.dtype(exclude)
+    if include:
+      dtype_selected = [i for i,v in enumerate(self.__dtypes) if v == dtype]
+    else:
+      dtype_selected = [i for i,v in enumerate(self.__dtypes) if v != dtype]
+
+    if dtype_selected:
+      col_selected = np.array(self.columns)[dtype_selected].tolist()
+      return self.get(col_selected)
+    return []
+
   
   def head(self,samples=5):
     samples = abs(samples)
@@ -125,7 +137,7 @@ class Dataset():
       if inplace:
         self.__data = data
         return 
-      return Dataset(data,self.columns,self.dtypes)
+      return Dataset(data,self.columns,self.__dtypes)
 
 
   def dropna(self,axis=0,inplace=False):

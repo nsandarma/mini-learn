@@ -30,7 +30,6 @@ class TestDataset(unittest.TestCase):
       dd_df.append(self.dataframe[col].dtype)
     np.testing.assert_array_equal(dd_ds,dd_df)
 
-
   def test_getitem(self):
     cols_selected = ["Sex","Age"]
     ds_cols_selected = self.dataset[cols_selected]
@@ -83,6 +82,15 @@ class TestDataset(unittest.TestCase):
     np.testing.assert_array_equal(ds.columns,self.dataset.columns)
     self.assertDictEqual(ds.dtypes,self.dataset.dtypes)
     np.testing.assert_array_equal(ds.values,self.dataset[idx_selected])
+
+  def test_select_dtypes(self):
+    dtype_selected = np.dtype("object")
+    ds_selected = self.dataset.select_dtypes(exclude=dtype_selected)
+    df_selected = self.dataframe.select_dtypes(exclude=dtype_selected)
+    np.testing.assert_array_equal(ds_selected.columns,df_selected.columns)
+    np.testing.assert_array_equal(ds_selected.values,df_selected.values)
+    self.assertDictEqual(ds_selected.dtypes,df_selected.dtypes.to_dict())
+
 
     
 
