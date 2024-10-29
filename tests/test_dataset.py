@@ -30,6 +30,23 @@ class TestDataset(unittest.TestCase):
       dd_df.append(self.dataframe[col].dtype)
     np.testing.assert_array_equal(dd_ds,dd_df)
 
+    ds_selected = self.dataset.select_dtypes("object")
+    df_selected = self.dataframe.select_dtypes("object")
+    self.assertDictEqual(ds_selected.dtypes,df_selected.dtypes.to_dict())
+
+    ds_selected = self.dataset.select_dtypes(exclude="object")
+    df_selected = self.dataframe.select_dtypes(exclude="object")
+    self.assertDictEqual(ds_selected.dtypes,df_selected.dtypes.to_dict())
+
+    for col in ds_selected.columns:
+      self.assertEqual(ds_selected[col].dtype,df_selected[col].dtype)
+
+  def test_dtype(self):
+    ds = self.dataset.select_dtypes(exclude="object")
+    df = self.dataframe.select_dtypes(exclude="object")
+    self.assertEqual(ds.dtype,df.values.dtype)
+    
+
   def test_getitem(self):
     cols_selected = ["Sex","Age"]
     ds_cols_selected = self.dataset[cols_selected]

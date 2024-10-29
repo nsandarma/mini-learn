@@ -51,12 +51,20 @@ class Dataset():
     self.__data = data
     self.__columns = tuple(columns) if  not isinstance(columns,tuple)  else columns
     self.__dtypes = tuple(dtypes) if not isinstance(dtypes,tuple) else dtypes
+
     self.n_samples,self.n_columns = data.shape
 
   def __getitem__(self,indexer):
     if isinstance(indexer,(np.ndarray,list,tuple,set)) and all(isinstance(i,str) for i in indexer): 
       indexer = [self.columns.index(i) for i in indexer]
-      return self.values[:,indexer]
+      dtype_selected = [self.__dtypes[i] for i in indexer]
+      if np.dtype("object") in dtype_selected:
+        dtype = np.dtype("object")
+      elif np.dtype("float") in dtype_selected:
+        dtype = np.dtype("float")
+      else:
+        dtype = np.dtype("int")
+      return self.values[:,indexer].astype(dtype)
     else: 
       if isinstance(indexer,str): 
         idx = self.columns.index(indexer)
@@ -160,7 +168,13 @@ class Dataset():
   
   @property
   def values(self):
-    return self.__data
+    if np.dtype("object") in self.__dtypes:
+      dtype = np.dtype("object")
+    elif np.dtype("float") in self.__dtypes:
+      dtype = np.dtype("float")
+    else:
+      dtype = np.dtype("int")
+    return self.__data.astype(dtype)
   
   @property
   def columns(self):
@@ -168,7 +182,7 @@ class Dataset():
 
   @property
   def dtype(self):
-    return self.__data.dtype
+    return self.values.dtype
 
   @property
   def dtypes(self):
