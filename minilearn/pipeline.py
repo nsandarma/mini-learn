@@ -61,6 +61,17 @@ class ColumnTransformer:
       return process.n_features_
     return len(cols)
 
+  def __dtype_ret(self,values:np.ndarray):
+    if values.dtype == np.object_:
+      if any(isinstance(element, str) for element in values.flat):
+        return np.dtype('object')
+      elif any(isinstance(element, float) for element in values.flat):
+        return np.dtype('float')
+      else:
+        return np.dtype('int')
+    return None
+
+
   def __init__(self,transformers:list,remainder:Literal["drop","passthrough"]="drop",verbose=False):
     # format transformer: 
     # [ (process_name,process,column_names)
@@ -74,6 +85,8 @@ class ColumnTransformer:
     self.verbose = verbose
 
   def fit(self,X,y=None): 
+    if isinstance(X,Dataset) or isinstance(y,Dataset):
+      return self.__fit_from_dataset(X,y)
     X,y = np.asarray(X),np.asarray(y)
     self.__columns_validate(X)
     self.n_cols = X.shape[1]
@@ -96,6 +109,7 @@ class ColumnTransformer:
         print(f"[ColumnTransformer] ....... ({i+1} of {len(n_process)}) Processing {n},")
 
     diff = np.setdiff1d(np.arange(X.shape[1]), np.array(self.__all_cols))
+    self.__dtype = self.__dtype_ret(X[:,diff])
     if self.remainder == "passthrough" and diff.size > 0:
       output_remainder = slice(idx,idx+len(diff))
       size = output_remainder.stop
@@ -107,21 +121,19 @@ class ColumnTransformer:
     self.__output_indices["remainder"] = output_remainder
     self.is_fitted = True
     return self
-  
-  
-  def fit_from_dataset(self,dataset:Dataset):
-    assert isinstance(dataset,Dataset), "dataset is not Dataset Class!"
-    self.__columns_validate(dataset)
+
+  def __fit_from_dataset(self,X:Dataset,y:Dataset=None):
+    assert isinstance(X,Dataset) and isinstance(y,Dataset), "X or y != <Dataset>"
+    assert y.shape[1] == 1, "y shape unknown"
+    self.__columns_validate(X)
     columns = self.__columns
-    if dataset.is_fitted:
-      y = dataset.y
-    else:
-      y = None
+    y = y.values.reshape(-1)
     self.__output_indices = dict()
     idx = 0
+
     for i,n in enumerate(self.__n_process):
       process = self.__process[i]
-      X_c = dataset[columns[i]]
+      X_c = X[columns[i]]
       if isinstance(process,TargetEncoder):
         assert y is not None,"fit dataset terlebih dahulu!"
         process.fit(X_c,y)
@@ -132,8 +144,9 @@ class ColumnTransformer:
       idx += col_out
       if self.verbose:
         print(f"[ColumnTransformer] ....... ({i+1} of {len(self.__n_process)}) Processing {n},")
-      
-    diff = np.setdiff1d(dataset.X_feature_names, np.array(self.__all_cols))
+
+    diff = np.setdiff1d(X.columns, np.array(self.__all_cols))
+    self.__dtype = self.__dtype_ret(X[diff])
     if self.remainder == "passthrough" and diff.size > 0:
       output_remainder = slice(idx,idx+len(diff))
       size = output_remainder.stop
@@ -153,7 +166,7 @@ class ColumnTransformer:
     X = np.asarray(X)
     columns = self.__columns
     n_rows,_ = X.shape
-    X_out = np.empty((n_rows,self.__n_cols),dtype="object")
+    X_out = np.empty((n_rows,self.__n_cols),dtype=self.__dtype)
     for i,n in enumerate(self.__n_process):
       process = self.__process[i]
       X_c = X[:,columns[i]]
@@ -164,8 +177,8 @@ class ColumnTransformer:
   
   def __transform_from_dataset(self,dataset:Dataset):
     columns = self.__columns
-    n_rows,_ = dataset.data.shape
-    X_out = np.empty((n_rows,self.__n_cols),dtype="object")
+    n_rows,_ = dataset.values.shape
+    X_out = np.empty((n_rows,self.__n_cols),dtype=self.__dtype)
     for i,n in enumerate(self.__n_process):
       process = self.__process[i]
       X_c = dataset[columns[i]]

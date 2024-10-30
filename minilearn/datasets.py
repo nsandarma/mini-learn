@@ -47,10 +47,22 @@ class Dataset():
   def __repr__(self):
     return str(self)
 
-  def __init__(self,data:np.ndarray,columns:tuple,dtypes=None):
-    self.__data = data
+  def __init__(self,data:np.ndarray,columns:tuple,dtypes:list=None):
+    assert isinstance(data,np.ndarray), "data must be array"
+    _,n_cols = data.shape
+    assert n_cols == len(columns) and data.shape[1] ==  len(dtypes), "x must same"
     self.__columns = tuple(columns) if  not isinstance(columns,tuple)  else columns
     self.__dtypes = tuple(dtypes) if not isinstance(dtypes,tuple) else dtypes
+    # if np.dtype("object") in dtypes:
+    #   dtype_ = np.dtype("object")
+    # else:
+    #   if np.dtype("float") in dtypes:
+    #     dtype_ = np.dtype("float")
+    #   dtype_ = np.dtype("int")
+    # data_ = np.empty((n_rows,n_cols),dtype=dtype_)
+    # for idx,col in enumerate(columns):
+    #   data_[:,idx] = data[:,idx].astype(dtypes[idx])
+    self.__data = data
 
     self.n_samples,self.n_columns = data.shape
 
@@ -157,6 +169,10 @@ class Dataset():
     else:
       idx_nan = np.where(is_nan)[0]
       return self.drop(index=idx_nan,axis=0,inplace=inplace)
+
+  def min(self) -> dict: return {col:min(self.values[:,idx].tolist()) for idx,col in enumerate(self.columns)}
+
+  def max(self) -> dict: return {col:max(self.values[:,idx].tolist()) for idx,col in enumerate(self.columns)}
 
 
   def save(self,filename):

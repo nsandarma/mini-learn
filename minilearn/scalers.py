@@ -1,4 +1,5 @@
 import numpy as np
+from minilearn.datasets import Dataset
 
 class MinMaxScaler:
   def __init__(self,feature_range=(0,1)):
@@ -10,7 +11,7 @@ class MinMaxScaler:
     self.__data_range_ = None
 
   def fit(self,X):
-    X = np.asarray(X)
+    X = np.asarray(X) if not isinstance(X,Dataset) else X.values
     self.__data_min_ = np.min(X,axis=0)
     self.__data_max_ = np.max(X,axis=0)
     self.__data_range_ = self.__data_max_ - self.__data_min_
@@ -20,7 +21,9 @@ class MinMaxScaler:
     self.__min_ = range_min - self.__data_min_ * self.__scale_
     return self
   
-  def transform(self,X) -> np.ndarray: X = np.asarray(X); return X * self.__scale_ + self.__min_
+  def transform(self,X) -> np.ndarray: 
+    X = np.asarray(X) if not isinstance(X,Dataset) else X.values 
+    return X * self.__scale_ + self.__min_
   
   def fit_transform(self,X) -> np.ndarray: return self.fit(X).transform(X)
   
@@ -40,14 +43,16 @@ class StandardScaler:
     self.__var = None
   
   def fit(self,X):
-    X = np.asarray(X)
+    X = np.asarray(X) if not isinstance(X,Dataset) else X.values
     self.__n_features = X.shape[1]
     self.__mean = np.mean(X,axis=0)
     self.__var = np.var(X,axis=0)
     self.__scale = np.sqrt(self.__var)
     return self
   
-  def transform(self,X) -> np.ndarray: X = np.asarray(X); return (X- self.__mean) / self.__scale
+  def transform(self,X) -> np.ndarray: 
+    X = np.asarray(X) if not isinstance(X,Dataset) else X.values
+    return (X- self.__mean) / self.__scale
   
   def fit_transform(self,X) -> np.ndarray : return self.fit(X).transform(X)
 
