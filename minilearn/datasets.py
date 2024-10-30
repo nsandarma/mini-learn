@@ -46,6 +46,9 @@ class Dataset():
 
   def __repr__(self):
     return str(self)
+  
+  def __len__(self):
+    return self.shape[0]
 
   def __init__(self,data:np.ndarray,columns:tuple,dtypes:list=None):
     assert isinstance(data,np.ndarray), "data must be array"
@@ -53,18 +56,7 @@ class Dataset():
     assert n_cols == len(columns) and data.shape[1] ==  len(dtypes), "x must same"
     self.__columns = tuple(columns) if  not isinstance(columns,tuple)  else columns
     self.__dtypes = tuple(dtypes) if not isinstance(dtypes,tuple) else dtypes
-    # if np.dtype("object") in dtypes:
-    #   dtype_ = np.dtype("object")
-    # else:
-    #   if np.dtype("float") in dtypes:
-    #     dtype_ = np.dtype("float")
-    #   dtype_ = np.dtype("int")
-    # data_ = np.empty((n_rows,n_cols),dtype=dtype_)
-    # for idx,col in enumerate(columns):
-    #   data_[:,idx] = data[:,idx].astype(dtypes[idx])
     self.__data = data
-
-    self.n_samples,self.n_columns = data.shape
 
   def __getitem__(self,indexer):
     if isinstance(indexer,(np.ndarray,list,tuple,set)) and all(isinstance(i,str) for i in indexer): 
@@ -113,12 +105,12 @@ class Dataset():
   
   def head(self,samples=5):
     samples = abs(samples)
-    if samples > self.n_samples: samples = self.n_samples
+    if samples > len(self): samples = len(self)
     return self[:samples]
 
   def tail(self,samples=5):
     if samples > 0 : samples = -samples
-    if samples < -self.n_samples: samples = -self.n_samples
+    if samples < -len(self): samples = -len(self)
     return self[samples:]
   
   def isna(self,return_counts=True):
@@ -174,6 +166,18 @@ class Dataset():
 
   def max(self) -> dict: return {col:max(self.values[:,idx].tolist()) for idx,col in enumerate(self.columns)}
 
+  def value_counts(self,normalize=False,dropna=True):
+    assert self.shape[1] == 1, "not supported for multi columns!"
+    data = self.dropna().values 
+    key, value = np.unique(data, return_counts=True)
+    res = {k: v for k, v in zip(key.tolist(), value.tolist())}
+    if not dropna:
+      isna_count = list(self.isna().values())[0]
+      if isna_count > 0: res["nan"] = isna_count
+    if normalize:
+      total_count = sum(res.values())
+      res = {k: v / total_count for k, v in res.items()}
+    return res
 
   def save(self,filename):
     with open(filename,"wb") as f:

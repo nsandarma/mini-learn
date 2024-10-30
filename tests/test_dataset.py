@@ -1,10 +1,12 @@
 import unittest
 from minilearn.datasets import Dataset,read_csv
+from minilearn.utils import train_test_split
 import pandas as pd
 import numpy as np
 
-def set_missing_values(dataframe,nums):
+def set_missing_values(dataframe,nums,seed=42):
   rows,cols = dataframe.values.shape
+  np.random.seed(seed)
   for i in range(nums):
     idx = np.random.randint(0,rows)
     col = np.random.randint(0,cols)
@@ -108,6 +110,25 @@ class TestDataset(unittest.TestCase):
     np.testing.assert_array_equal(ds_selected.values,df_selected.values)
     self.assertDictEqual(ds_selected.dtypes,df_selected.dtypes.to_dict())
 
+  def test_train_test_split(self):
+    features = self.dataset.columns[:-1]
+    target = "Drug"
+    X = self.dataset.get(features)
+    y = self.dataset.get(target)
+    X_train,y_train,X_test,y_test = train_test_split(X,y,random_state=42,train_size=0.8,shuffle=False)
+
+  def test_value_counts(self):
+    df = self.dataframe[["Sex"]].copy()
+    set_missing_values(df,np.random.randint(0,20))
+    data = df.values
+    cols = df.columns.tolist()
+    dtypes = df.dtypes.tolist()
+    ds = Dataset(data=data,columns=cols,dtypes=dtypes)
+    ds_val = ds.value_counts(dropna=False,normalize=True)
+    s = df.value_counts(dropna=False,normalize=True).to_dict()
+    key = [str(i[0]) for i in s.keys()]
+    s = {k:v for k,v in zip(key,s.values())}
+    self.assertDictEqual(ds_val,s)
     
 
 
