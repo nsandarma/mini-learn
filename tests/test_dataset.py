@@ -111,11 +111,34 @@ class TestDataset(unittest.TestCase):
     self.assertDictEqual(ds_selected.dtypes,df_selected.dtypes.to_dict())
 
   def test_train_test_split(self):
-    features = self.dataset.columns[:-1]
+    from sklearn import model_selection
+    random_state = 42
+    train_size = 0.8
+    shuffle = False
+
+    features = self.dataframe.columns[:-1].tolist()
     target = "Drug"
     X = self.dataset.get(features)
     y = self.dataset.get(target)
-    X_train,y_train,X_test,y_test = train_test_split(X,y,random_state=42,train_size=0.8,shuffle=False)
+    X_train,y_train,X_test,y_test = train_test_split(X,y,random_state=random_state,train_size=train_size,shuffle=shuffle)
+
+  
+    X_train_,X_test_,y_train_,y_test_ = model_selection.train_test_split(self.dataframe[features],
+                                                                         self.dataframe[[target]],
+                                                                         shuffle=shuffle,train_size=train_size,
+                                                                         random_state=random_state)
+    np.testing.assert_array_equal(X_train_,X_train)
+    np.testing.assert_array_equal(y_train_,y_train)
+    np.testing.assert_array_equal(X_test_,X_test)
+    np.testing.assert_array_equal(y_test_,y_test)
+
+    X_train,y_train,X_test,y_test = train_test_split(X,y,random_state=42,train_size=train_size,shuffle=True)
+    expected = int(train_size * len(self.dataset))
+    self.assertEqual(X_train.shape[0],expected)
+    self.assertEqual(y_train.shape[0],expected)
+    self.assertEqual(X_test.shape[0],len(self.dataset) - expected)
+    self.assertEqual(y_test.shape[0],len(self.dataset) - expected)
+
 
   def test_value_counts(self):
     df = self.dataframe[["Sex"]].copy()
